@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
@@ -38,7 +39,7 @@ public class Stage {
     }
 
     public void sendBlocksToAudience() {
-        Map<BlockifyPosition, Material> blocks = new HashMap<>();
+        Map<BlockifyPosition, BlockData> blocks = new HashMap<>();
         for (View view : views) {
             blocks.putAll(view.getMultiBlockChanges());
         }

@@ -11,6 +11,7 @@ import org.bukkit.block.BlockState;
 import org.bukkit.entity.Player;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
@@ -24,16 +25,14 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
             int chunkZ = chunkData.getColumn().getZ();
 
 
-            View view = Blockify.instance.getStageManager().getStages(player.getUniqueId()).stream()
+            List<View> views = Blockify.instance.getStageManager().getStages(player.getUniqueId()).stream()
                     .flatMap(stage -> stage.getViews().stream())
-                    .filter(view1 -> view1.hasChunk(chunkX, chunkZ))
-                    .findFirst()
-                    .orElse(null);
+                    .filter(view1 -> view1.hasChunk(chunkX, chunkZ)).toList();
 
-            if (view == null) return;
+            if (views.isEmpty()) return;
 
             Set<BlockState> blockStates = new HashSet<>();
-            view.getBlocks().get(new BlockifyChunk(chunkX, chunkZ)).forEach((position, material) -> blockStates.add(position.getBlockState(player.getWorld(), material)));
+            views.forEach(view -> view.getBlocks().get(new BlockifyChunk(chunkX, chunkZ)).forEach((position, material) -> blockStates.add(position.getBlockState(player.getWorld(), material))));
             player.sendBlockChanges(blockStates);
         }
     }

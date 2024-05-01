@@ -1,6 +1,8 @@
 package codes.kooper.blockify.utils;
 
 import codes.kooper.blockify.types.BlockifyPosition;
+import org.bukkit.block.data.Ageable;
+import org.bukkit.block.data.BlockData;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -17,6 +19,12 @@ public class BlockUtils {
             }
         }
         return blocks;
+    }
+
+    public static BlockData setAge(BlockData blockData, int age) {
+        Ageable ageable = (Ageable) blockData;
+        ageable.setAge(age);
+        return ageable;
     }
 
 }

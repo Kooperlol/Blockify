@@ -5,9 +5,9 @@ import io.papermc.paper.math.Position;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Location;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.util.Vector;
 
 import java.util.Set;
@@ -65,9 +65,10 @@ public class BlockifyPosition {
         return Math.pow(x - other.x, 2) + Math.pow(y - other.y, 2) + Math.pow(z - other.z, 2);
     }
 
-    public BlockState getBlockState(World world, Material material) {
+    public BlockState getBlockState(World world, BlockData blockData) {
         BlockState state = toLocation(world).getBlock().getState().copy();
-        state.setType(material);
+        state.setBlockData(blockData);
+        state.setType(blockData.getMaterial());
         return state;
     }
 

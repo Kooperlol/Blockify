@@ -36,13 +36,12 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
                     .findFirst()
                     .orElse(null);
             if (view == null) return;
-            Material material = view.getBlock(position);
-            BlockData blockData = material.createBlockData();
+            BlockData blockData = view.getBlock(position);
 
             if (actionType == DiggingAction.START_DIGGING) {
                 Bukkit.getScheduler().runTask(Blockify.instance, () -> new BlockifyInteractEvent(player, position.toPosition(), blockData, view, view.getStage()).callEvent());
                 if (player.getGameMode() == GameMode.CREATIVE ||
-                        material.createBlockData().getDestroySpeed(player.getInventory().getItemInMainHand()) <= 0f ||
+                        blockData.getMaterial().getHardness() == 0 ||
                         ((blockData.getDestroySpeed(player.getInventory().getItemInMainHand(), true) >= blockData.getMaterial().getHardness() * 30) && !player.isFlying() ||
                                 (blockData.getDestroySpeed(player.getInventory().getItemInMainHand(), true) >= blockData.getMaterial().getHardness() * 150) && player.isFlying())) {
                     if (!view.isBreakable()) {
@@ -54,7 +53,7 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
                         ghostBreakEvent.callEvent();
                         if (!ghostBreakEvent.isCancelled()) {
                             player.sendBlockChange(position.toLocation(player.getWorld()), Material.AIR.createBlockData());
-                            view.setBlock(position, Material.AIR);
+                            view.setBlock(position, Material.AIR.createBlockData());
                         }
                     });
                 }

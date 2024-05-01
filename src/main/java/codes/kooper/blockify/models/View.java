@@ -4,18 +4,17 @@ import codes.kooper.blockify.types.BlockifyChunk;
 import codes.kooper.blockify.types.BlockifyPosition;
 import lombok.Getter;
 import lombok.Setter;
-import org.bukkit.Material;
+import org.bukkit.block.data.BlockData;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Getter
 @Setter
 public class View {
 
-    private final HashMap<BlockifyChunk, HashMap<BlockifyPosition, Material>> blocks;
+    private final HashMap<BlockifyChunk, HashMap<BlockifyPosition, BlockData>> blocks;
     private final Stage stage;
     private boolean breakable;
     private Pattern pattern;
@@ -29,7 +28,7 @@ public class View {
     public BlockifyPosition getHighestBlock(int x, int z) {
         for (int y = stage.getMaxPosition().getY(); y >= stage.getMinPosition().getY(); y--) {
             BlockifyPosition position = new BlockifyPosition(x, y, z);
-            if (hasBlock(position) && getBlock(position).isSolid()) {
+            if (hasBlock(position) && getBlock(position).getMaterial().isSolid()) {
                 return position;
             }
         }
@@ -39,7 +38,7 @@ public class View {
     public BlockifyPosition getLowestBlock(int x, int z) {
         for (int y = stage.getMinPosition().getY(); y <= stage.getMaxPosition().getY(); y++) {
             BlockifyPosition position = new BlockifyPosition(x, y, z);
-            if (hasBlock(position) && getBlock(position).isSolid()) {
+            if (hasBlock(position) && getBlock(position).getMaterial().isSolid()) {
                 return position;
             }
         }
@@ -64,7 +63,7 @@ public class View {
     public void addBlock(BlockifyPosition position) {
         if (!hasBlock(position)) {
             blocks.putIfAbsent(position.toBlockifyChunk(), new HashMap<>());
-            blocks.get(position.toBlockifyChunk()).put(position, getPattern().getRandomBlockData().getMaterial());
+            blocks.get(position.toBlockifyChunk()).put(position, getPattern().getRandomBlockData());
         }
     }
 
@@ -87,16 +86,15 @@ public class View {
         return true;
     }
 
-    public Map<BlockifyPosition, Material> getMultiBlockChanges() {
-        Map<BlockifyPosition, Material> blockChanges = new HashMap<>();
-        for (Map.Entry<BlockifyChunk, HashMap<BlockifyPosition, Material>> entry : blocks.entrySet())
-        {
+    public Map<BlockifyPosition, BlockData> getMultiBlockChanges() {
+        Map<BlockifyPosition, BlockData> blockChanges = new HashMap<>();
+        for (Map.Entry<BlockifyChunk, HashMap<BlockifyPosition, BlockData>> entry : blocks.entrySet()) {
             blockChanges.putAll(entry.getValue());
         }
         return blockChanges;
     }
 
-    public Material getBlock(BlockifyPosition position) {
+    public BlockData getBlock(BlockifyPosition position) {
         return blocks.get(position.toBlockifyChunk()).get(position);
     }
 
@@ -104,15 +102,15 @@ public class View {
         return blocks.containsKey(new BlockifyChunk(x, z));
     }
 
-    public void setBlocks(Set<BlockifyPosition> positions, Material material) {
+    public void setBlocks(Set<BlockifyPosition> positions, BlockData blockData) {
         for (BlockifyPosition position : positions) {
-            setBlock(position, material);
+            setBlock(position, blockData);
         }
     }
 
-    public void setBlock(BlockifyPosition position, Material material) {
+    public void setBlock(BlockifyPosition position, BlockData blockData) {
         if (hasBlock(position)) {
-            blocks.get(position.toBlockifyChunk()).put(position, material);
+            blocks.get(position.toBlockifyChunk()).put(position, blockData);
         }
     }
 }

@@ -7,8 +7,8 @@ import codes.kooper.blockify.models.Stage;
 import codes.kooper.blockify.types.BlockifyPosition;
 import lombok.Getter;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
@@ -23,11 +23,11 @@ public class BlockChangeManager {
         this.blockChangeTasks = new HashMap<>();
     }
 
-    public void sendBlockChanges(Stage stage, Audience audience, Map<BlockifyPosition, Material> blockChanges) {
+    public void sendBlockChanges(Stage stage, Audience audience, Map<BlockifyPosition, BlockData> blockChanges) {
         if (blockChanges.isEmpty()) return;
         new OnBlockChangeSendEvent(stage, blockChanges).callEvent();
         if (blockChanges.size() == 1) {
-            audience.getPlayers().forEach(player -> Optional.ofNullable(Bukkit.getPlayer(player)).ifPresent(p -> blockChanges.forEach((position, blockData) -> p.sendBlockChange(position.toLocation(stage.getWorld()), blockData.createBlockData()))));
+            audience.getPlayers().forEach(player -> Optional.ofNullable(Bukkit.getPlayer(player)).ifPresent(p -> blockChanges.forEach((position, blockData) -> p.sendBlockChange(position.toLocation(stage.getWorld()), blockData))));
             return;
         }
         Bukkit.getScheduler().runTaskAsynchronously(Blockify.instance, () -> {
