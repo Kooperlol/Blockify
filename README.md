@@ -1,4 +1,4 @@
-![blockify.png](public%2Fblockify.png)
+![blockify.png](public/blockify.png)
 
 # About
 Ever wondered how servers like FadeCloud or AkumaMC do private farms and mines?
