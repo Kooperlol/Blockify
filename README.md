@@ -1,4 +1,4 @@
-Ever wondered how servers like FadeCloud or AkumaMC do private farming and mines?
+Ever wondered how servers like FadeCloud or AkumaMC do private farms and mines?
 Well, let Blockify take care of it for you! Blockify is a public library that can manage and create client-sided blocks.
 
 Currently, Blockify is in Alpha so there are no releases or proper documentation.
