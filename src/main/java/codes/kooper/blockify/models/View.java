@@ -5,9 +5,9 @@ import codes.kooper.blockify.types.BlockifyPosition;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.block.data.BlockData;
+import org.codehaus.plexus.util.FastMap;
 
 import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 
 @Getter
@@ -84,14 +84,6 @@ public class View {
             }
         }
         return true;
-    }
-
-    public Map<BlockifyPosition, BlockData> getMultiBlockChanges() {
-        Map<BlockifyPosition, BlockData> blockChanges = new HashMap<>();
-        for (Map.Entry<BlockifyChunk, HashMap<BlockifyPosition, BlockData>> entry : blocks.entrySet()) {
-            blockChanges.putAll(entry.getValue());
-        }
-        return blockChanges;
     }
 
     public BlockData getBlock(BlockifyPosition position) {

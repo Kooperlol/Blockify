@@ -5,14 +5,12 @@ import codes.kooper.blockify.types.BlockifyChunk;
 import codes.kooper.blockify.types.BlockifyPosition;
 import lombok.Getter;
 import lombok.Setter;
-import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 @Getter
@@ -39,9 +37,9 @@ public class Stage {
     }
 
     public void sendBlocksToAudience() {
-        Map<BlockifyPosition, BlockData> blocks = new HashMap<>();
+        HashMap<BlockifyChunk, HashMap<BlockifyPosition, BlockData>> blocks = new HashMap<>();
         for (View view : views) {
-            blocks.putAll(view.getMultiBlockChanges());
+            blocks.putAll(view.getBlocks());
         }
         Blockify.instance.getBlockChangeManager().sendBlockChanges(this, audience, blocks);
     }
@@ -54,10 +52,17 @@ public class Stage {
         views.remove(view);
     }
 
+    /**
+     * Get all chunks that are being used by this stage.
+     *
+     * @return Set of chunks
+     */
     public Set<BlockifyChunk> getChunks() {
         Set<BlockifyChunk> chunks = new HashSet<>();
-        for (View view : views) {
-            chunks.addAll(view.getBlocks().keySet());
+        for (int x = minPosition.getX() >> 4; x <= maxPosition.getX() >> 4; x++) {
+            for (int z = minPosition.getZ() >> 4; z <= maxPosition.getZ() >> 4; z++) {
+                chunks.add(new BlockifyChunk(x, z));
+            }
         }
         return chunks;
     }

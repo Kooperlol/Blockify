@@ -23,7 +23,7 @@ Discord: https://discord.gg/BKrSKqaAZp
 6. **Game Mode Checks**: The project checks the player's game mode and adjusts block-breaking speed accordingly.
 
 7. **Memory Management**: Blockify manages memory efficiently by using custom data types like `BlockifyPosition` and `BlockifyChunk`.
-8. **Skript Support**: Blockify has a Skript file `blockify.sk` that allows you to create views and stages.
+8. **Skript Support**: Blockify has a Skript Addon, [SkBlockify](https://github.com/Kooperlol/SkBlockify), that allows you to use Skript to manage client-sided blocks.
 9. **Custom Events:** Blockify has a custom event `BlockifyBlockBreakEvent` that is called when a block is broken. 
 10. **Complex Block Patterns:** Blockify can handle complex block patterns using the `BlockifyPattern` class. In addition, it can handle setting crop ages and other custom block data.
 

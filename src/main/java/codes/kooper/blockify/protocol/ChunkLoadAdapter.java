@@ -1,18 +1,17 @@
 package codes.kooper.blockify.protocol;
 
 import codes.kooper.blockify.Blockify;
+import codes.kooper.blockify.models.Stage;
 import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyChunk;
 import com.github.retrooper.packetevents.event.SimplePacketListenerAbstract;
 import com.github.retrooper.packetevents.event.simple.PacketPlaySendEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChunkData;
-import org.bukkit.block.BlockState;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
 
@@ -23,17 +22,23 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
             WrapperPlayServerChunkData chunkData = new WrapperPlayServerChunkData(event);
             int chunkX = chunkData.getColumn().getX();
             int chunkZ = chunkData.getColumn().getZ();
+            List<Stage> stages = Blockify.instance.getStageManager().getStages(player.getUniqueId());
 
+            if (stages == null || stages.isEmpty()) {
+                return;
+            }
 
-            List<View> views = Blockify.instance.getStageManager().getStages(player.getUniqueId()).stream()
-                    .flatMap(stage -> stage.getViews().stream())
-                    .filter(view1 -> view1.hasChunk(chunkX, chunkZ)).toList();
-
-            if (views.isEmpty()) return;
-
-            Set<BlockState> blockStates = new HashSet<>();
-            views.forEach(view -> view.getBlocks().get(new BlockifyChunk(chunkX, chunkZ)).forEach((position, material) -> blockStates.add(position.getBlockState(player.getWorld(), material))));
-            player.sendBlockChanges(blockStates);
+            for (Stage stage : stages) {
+                for (View view : stage.getViews()) {
+                    BlockifyChunk blockifyChunk = new BlockifyChunk(chunkX, chunkZ);
+                    if (Blockify.instance.getBlockChangeManager().getChunksBeingSent().get(player.getUniqueId()) != null && Blockify.instance.getBlockChangeManager().getChunksBeingSent().get(player.getUniqueId()).contains(blockifyChunk)) {
+                        return;
+                    }
+                    if (view.getBlocks().containsKey(blockifyChunk)) {
+                        Bukkit.getScheduler().runTask(Blockify.instance, () -> Blockify.instance.getBlockChangeManager().sendChunkPacket(stage, player, blockifyChunk, view.getBlocks()));
+                    }
+                }
+            }
         }
     }
 
