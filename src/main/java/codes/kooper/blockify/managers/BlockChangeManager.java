@@ -52,8 +52,6 @@ public class BlockChangeManager {
             return;
         }
 
-        int chunkAmount = blockChanges.size() >= 10000 ? blockChanges.size() / 5 : 1;
-
         for (UUID uuid : audience.getPlayers()) {
             Player onlinePlayer = Bukkit.getPlayer(uuid);
             AtomicInteger chunkIndex = new AtomicInteger(0);
@@ -65,14 +63,9 @@ public class BlockChangeManager {
                         blockChangeTasks.remove(uuid);
                         return;
                     }
-                    for (int i = 0; i < chunkAmount; i++) {
-                        if (chunkIndex.get() >= chunksToSend.length) {
-                            break;
-                        }
-                        BlockifyChunk chunk = chunksToSend[chunkIndex.get()];
-                        sendChunkPacket(stage, onlinePlayer, chunk, blockChanges);
-                        chunkIndex.getAndAdd(1);
-                    }
+                    BlockifyChunk chunk = chunksToSend[chunkIndex.get()];
+                    sendChunkPacket(stage, onlinePlayer, chunk, blockChanges);
+                    chunkIndex.getAndIncrement();
                 }, 0L, 1L));
             }
         }
@@ -104,6 +97,7 @@ public class BlockChangeManager {
             }
             WrapperPlayServerMultiBlockChange.EncodedBlock[] encodedBlocksArray = encodedBlocks.toArray(new WrapperPlayServerMultiBlockChange.EncodedBlock[0]);
             WrapperPlayServerMultiBlockChange wrapperPlayServerMultiBlockChange = new WrapperPlayServerMultiBlockChange(new Vector3i(chunk.x(), chunkY, chunk.z()), true, encodedBlocksArray);
+            Bukkit.getScheduler().runTask(Blockify.instance, () -> user.sendPacket(wrapperPlayServerMultiBlockChange));
             user.sendPacket(wrapperPlayServerMultiBlockChange);
         }
         chunksBeingSent.get(user.getUUID()).remove(chunk);
