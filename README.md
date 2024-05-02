@@ -36,7 +36,6 @@ Discord: https://discord.gg/BKrSKqaAZp
 
 ## Dependencies
 - [PacketEvents](https://github.com/retrooper/packetevents)
-- [ProtocolLib](https://github.com/dmulloy2/ProtocolLib)
 
 ## Statistics
 Check out our [bStats page](https://bstats.org/plugin/bukkit/Blockify/21782)
