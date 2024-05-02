@@ -44,7 +44,7 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
                         blockData.getMaterial().getHardness() == 0 ||
                         ((blockData.getDestroySpeed(player.getInventory().getItemInMainHand(), true) >= blockData.getMaterial().getHardness() * 30) && !player.isFlying() ||
                                 (blockData.getDestroySpeed(player.getInventory().getItemInMainHand(), true) >= blockData.getMaterial().getHardness() * 150) && player.isFlying())) {
-                    if (!view.isBreakable()) {
+                    if (!view.isBreakable() || player.getGameMode() == GameMode.ADVENTURE || player.getGameMode() == GameMode.SPECTATOR) {
                         player.sendBlockChange(position.toLocation(player.getWorld()), player.getWorld().getBlockData(position.toLocation(player.getWorld())));
                         return;
                     }
