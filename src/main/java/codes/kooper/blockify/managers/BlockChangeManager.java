@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class BlockChangeManager {
 
     private final ConcurrentHashMap<UUID, BukkitTask> blockChangeTasks;
-    private final ConcurrentHashMap<UUID, List<Long>> chunksBeingSent;
+    private final ConcurrentHashMap<UUID, Vector<Long>> chunksBeingSent;
     private final ConcurrentHashMap<BlockData, Integer> blockDataToId;
 
     public BlockChangeManager() {
@@ -76,7 +76,7 @@ public class BlockChangeManager {
 
     public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
         User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
-        chunksBeingSent.computeIfAbsent(player.getUniqueId(), k -> new ArrayList<>());
+        chunksBeingSent.computeIfAbsent(player.getUniqueId(), k -> new Vector<>());
         if (chunksBeingSent.get(player.getUniqueId()).contains(chunk.getChunkKey())) {
             return;
         }
@@ -89,7 +89,7 @@ public class BlockChangeManager {
                 if (blockY >> 4 == chunkY) {
                     BlockData blockData = entry.getValue();
                     if (!blockDataToId.containsKey(blockData)) {
-                        blockDataToId.put(blockData, WrappedBlockState.getByString(PacketEvents.getAPI().getPlayerManager().getClientVersion(player), blockData.getAsString(false)).getGlobalId());
+                        blockDataToId.put(blockData, WrappedBlockState.getByString(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), blockData.getAsString(false)).getGlobalId());
                     }
                     int id = blockDataToId.get(blockData);
                     int x = position.getX() & 0xF;
