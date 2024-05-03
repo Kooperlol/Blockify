@@ -67,7 +67,7 @@ public class BlockChangeManager {
                     }
                     BlockifyChunk chunk = chunksToSend[chunkIndex.get()];
                     chunkIndex.getAndIncrement();
-                    if (!onlinePlayer.isChunkSent(chunk.getChunkKey())) return;
+                    if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) return;
                     Bukkit.getScheduler().runTaskAsynchronously(Blockify.instance, () -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
                 }, 0L, 1L));
             }
@@ -89,7 +89,7 @@ public class BlockChangeManager {
                 if (blockY >> 4 == chunkY) {
                     BlockData blockData = entry.getValue();
                     if (!blockDataToId.containsKey(blockData)) {
-                        blockDataToId.put(blockData, WrappedBlockState.getByString(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), blockData.getAsString(false)).getGlobalId());
+                        blockDataToId.put(blockData, WrappedBlockState.getByString(PacketEvents.getAPI().getPlayerManager().getClientVersion(user), blockData.getAsString(false)).getGlobalId());
                     }
                     int id = blockDataToId.get(blockData);
                     int x = position.getX() & 0xF;
