@@ -5,23 +5,25 @@ import codes.kooper.blockify.types.BlockifyPosition;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.block.data.BlockData;
-import org.codehaus.plexus.util.FastMap;
 
-import java.util.HashMap;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
 @Setter
 public class View {
 
-    private final HashMap<BlockifyChunk, HashMap<BlockifyPosition, BlockData>> blocks;
+    private final ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks;
     private final Stage stage;
-    private boolean breakable;
+    private final String name;
+    private boolean breakable = true;
     private Pattern pattern;
 
-    public View(Stage stage, Pattern pattern) {
-        this.blocks = new HashMap<>();
+    public View(String name, Stage stage, Pattern pattern, boolean breakable) {
+        this.name = name;
+        this.blocks = new ConcurrentHashMap<>();
         this.stage = stage;
+        this.breakable = breakable;
         this.pattern = pattern;
     }
 
@@ -45,6 +47,10 @@ public class View {
         return null;
     }
 
+    public ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> getBlocks() {
+        return new ConcurrentHashMap<>(blocks);
+    }
+
     public void removeBlock(BlockifyPosition position) {
         if (hasBlock(position)) {
             blocks.get(position.toBlockifyChunk()).remove(position);
@@ -61,10 +67,10 @@ public class View {
     }
 
     public void addBlock(BlockifyPosition position) {
-        if (!hasBlock(position)) {
-            blocks.putIfAbsent(position.toBlockifyChunk(), new HashMap<>());
-            blocks.get(position.toBlockifyChunk()).put(position, getPattern().getRandomBlockData());
+        if (!blocks.containsKey(position.toBlockifyChunk())) {
+            blocks.put(position.toBlockifyChunk(), new ConcurrentHashMap<>());
         }
+        blocks.get(position.toBlockifyChunk()).put(position, pattern.getRandomBlockData());
     }
 
     public void addBlocks(Set<BlockifyPosition> positions) {
@@ -98,6 +104,10 @@ public class View {
         for (BlockifyPosition position : positions) {
             setBlock(position, blockData);
         }
+    }
+
+    public void setBreakable(boolean breakable) {
+        this.breakable = breakable;
     }
 
     public void setBlock(BlockifyPosition position, BlockData blockData) {

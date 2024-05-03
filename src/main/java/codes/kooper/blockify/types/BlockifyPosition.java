@@ -10,13 +10,12 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.util.Vector;
 
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Getter
 @Setter
-public class BlockifyPosition implements Cloneable {
+public class BlockifyPosition {
 
     private int x, y, z;
 
@@ -84,27 +83,16 @@ public class BlockifyPosition implements Cloneable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof BlockifyPosition)) return false;
-        BlockifyPosition that = (BlockifyPosition) o;
-        return x == that.x && y == that.y && z == that.z;
+        if (o == this) return true;
+        if (!(o instanceof BlockifyPosition other)) return false;
+        return this.x == other.x && this.y == other.y && this.z == other.z;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(x, y, z);
-    }
-
-    @Override
-    public BlockifyPosition clone() {
-        try {
-            BlockifyPosition clone = (BlockifyPosition) super.clone();
-            clone.x = x;
-            clone.y = y;
-            clone.z = z;
-            return clone;
-        } catch (CloneNotSupportedException e) {
-            throw new AssertionError();
-        }
+        int result = x;
+        result = 31 * result + y;
+        result = 31 * result + z;
+        return result;
     }
 }

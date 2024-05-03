@@ -18,21 +18,23 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
 public class BlockChangeManager {
 
-    private final HashMap<UUID, BukkitTask> blockChangeTasks;
-    private final HashMap<UUID, List<BlockifyChunk>> chunksBeingSent;
-    private final HashMap<BlockData, Integer> blockDataToId = new HashMap<>();
+    private final ConcurrentHashMap<UUID, BukkitTask> blockChangeTasks;
+    private final ConcurrentHashMap<UUID, List<Long>> chunksBeingSent;
+    private final ConcurrentHashMap<BlockData, Integer> blockDataToId;
 
     public BlockChangeManager() {
-        this.blockChangeTasks = new HashMap<>();
-        this.chunksBeingSent = new HashMap<>();
+        this.blockChangeTasks = new ConcurrentHashMap<>();
+        this.chunksBeingSent = new ConcurrentHashMap<>();
+        this.blockDataToId = new ConcurrentHashMap<>();
     }
 
-    public void sendBlockChanges(Stage stage, Audience audience, HashMap<BlockifyChunk, HashMap<BlockifyPosition, BlockData>> blockChanges) {
+    public void sendBlockChanges(Stage stage, Audience audience, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
         if (blockChanges.isEmpty()) {
             return;
         }
@@ -42,7 +44,7 @@ public class BlockChangeManager {
             for (UUID uuid : audience.getPlayers()) {
                 Player onlinePlayer = Bukkit.getPlayer(uuid);
                 if (onlinePlayer != null) {
-                    for (Map.Entry<BlockifyChunk, HashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
+                    for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
                         BlockifyPosition position = entry.getValue().keySet().iterator().next();
                         BlockData blockData = entry.getValue().values().iterator().next();
                         onlinePlayer.sendBlockChange(position.toLocation(stage.getWorld()), blockData);
@@ -64,45 +66,45 @@ public class BlockChangeManager {
                         return;
                     }
                     BlockifyChunk chunk = chunksToSend[chunkIndex.get()];
-                    sendChunkPacket(stage, onlinePlayer, chunk, blockChanges);
                     chunkIndex.getAndIncrement();
+                    if (!onlinePlayer.isChunkSent(chunk.getChunkKey())) return;
+                    Bukkit.getScheduler().runTaskAsynchronously(Blockify.instance, () -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
                 }, 0L, 1L));
             }
         }
     }
 
-    public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, HashMap<BlockifyChunk, HashMap<BlockifyPosition, BlockData>> blockChanges) {
+    public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
         User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
-        chunksBeingSent.computeIfAbsent(user.getUUID(), k -> new ArrayList<>());
-        if (chunksBeingSent.get(user.getUUID()).contains(chunk)) {
+        chunksBeingSent.computeIfAbsent(player.getUniqueId(), k -> new ArrayList<>());
+        if (chunksBeingSent.get(player.getUniqueId()).contains(chunk.getChunkKey())) {
             return;
         }
-        chunksBeingSent.get(user.getUUID()).add(chunk);
-        int minHeight = stage.getWorld().getMinHeight();
-        int maxHeight = stage.getWorld().getMaxHeight();
-        HashMap<BlockifyPosition, BlockData> chunkData = blockChanges.get(chunk);
+        chunksBeingSent.get(player.getUniqueId()).add(chunk.getChunkKey());
         for (int chunkY = stage.getMinPosition().getY() >> 4; chunkY <= stage.getMaxPosition().getY() >> 4; chunkY++) {
             List<WrapperPlayServerMultiBlockChange.EncodedBlock> encodedBlocks = new ArrayList<>();
-            for (int x = 0; x < 16; x++) {
-                for (int y = minHeight; y < maxHeight; y++) {
-                    for (int z = 0; z < 16; z++) {
-                        BlockifyPosition position = new BlockifyPosition(chunk.x() << 4 | x, y, chunk.z() << 4 | z);
-                        if (chunkData.containsKey(position)) {
-                            BlockData blockData = chunkData.get(position);
-                            int id = blockDataToId.computeIfAbsent(blockData, data -> WrappedBlockState.getByString(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), data.getAsString(false)).getGlobalId());
-                            encodedBlocks.add(new WrapperPlayServerMultiBlockChange.EncodedBlock(id, x, y, z));
-                        }
+            for (Map.Entry<BlockifyPosition, BlockData> entry : blockChanges.get(chunk).entrySet()) {
+                BlockifyPosition position = entry.getKey();
+                int blockY = position.getY();
+                if (blockY >> 4 == chunkY) {
+                    BlockData blockData = entry.getValue();
+                    if (!blockDataToId.containsKey(blockData)) {
+                        blockDataToId.put(blockData, WrappedBlockState.getByString(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), blockData.getAsString(false)).getGlobalId());
                     }
+                    int id = blockDataToId.get(blockData);
+                    int x = position.getX() & 0xF;
+                    int y = position.getY();
+                    int z = position.getZ() & 0xF;
+                    encodedBlocks.add(new WrapperPlayServerMultiBlockChange.EncodedBlock(id, x, y, z));
                 }
             }
             WrapperPlayServerMultiBlockChange.EncodedBlock[] encodedBlocksArray = encodedBlocks.toArray(new WrapperPlayServerMultiBlockChange.EncodedBlock[0]);
             WrapperPlayServerMultiBlockChange wrapperPlayServerMultiBlockChange = new WrapperPlayServerMultiBlockChange(new Vector3i(chunk.x(), chunkY, chunk.z()), true, encodedBlocksArray);
             Bukkit.getScheduler().runTask(Blockify.instance, () -> user.sendPacket(wrapperPlayServerMultiBlockChange));
-            user.sendPacket(wrapperPlayServerMultiBlockChange);
         }
-        chunksBeingSent.get(user.getUUID()).remove(chunk);
-        if (chunksBeingSent.get(user.getUUID()).isEmpty()) {
-            chunksBeingSent.remove(user.getUUID());
+        chunksBeingSent.get(player.getUniqueId()).remove(chunk.getChunkKey());
+        if (chunksBeingSent.get(player.getUniqueId()).isEmpty()) {
+            chunksBeingSent.remove(player.getUniqueId());
         }
     }
 

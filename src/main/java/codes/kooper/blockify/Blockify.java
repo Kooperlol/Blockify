@@ -1,5 +1,7 @@
 package codes.kooper.blockify;
 
+import codes.kooper.blockify.bstats.Metrics;
+import codes.kooper.blockify.listeners.StageBoundListener;
 import codes.kooper.blockify.managers.BlockChangeManager;
 import codes.kooper.blockify.managers.StageManager;
 import codes.kooper.blockify.protocol.BlockDigAdapter;
@@ -8,7 +10,6 @@ import codes.kooper.blockify.protocol.ChunkLoadAdapter;
 import com.github.retrooper.packetevents.PacketEvents;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import lombok.Getter;
-import org.bstats.bukkit.Metrics;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -35,6 +36,8 @@ public final class Blockify extends JavaPlugin {
 
         stageManager = new StageManager();
         blockChangeManager = new BlockChangeManager();
+
+        getServer().getPluginManager().registerEvents(new StageBoundListener(), this);
 
         PacketEvents.getAPI().getEventManager().registerListeners(new BlockDigAdapter(), new BlockPlaceAdapter(), new ChunkLoadAdapter());
         PacketEvents.getAPI().init();

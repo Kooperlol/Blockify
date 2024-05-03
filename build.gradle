@@ -8,6 +8,7 @@ version = '1.0-SNAPSHOT'
 tasks.withType(Jar).configureEach {
     destinationDirectory = file('C:\\Users\\sworn\\Desktop\\Blockify-Dev\\plugins')
 }
+
 repositories {
     mavenCentral()
     maven {
@@ -23,7 +24,6 @@ repositories {
 
 dependencies {
     implementation 'org.projectlombok:lombok:1.18.28'
-    compileOnly "org.bstats:bstats-bukkit:3.0.2"
     compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
     compileOnly 'com.github.retrooper.packetevents:spigot:2.2.1'
 }
@@ -39,6 +39,8 @@ java {
 }
 
 tasks.withType(JavaCompile).configureEach {
+    options.annotationProcessorPath = configurations.compileClasspath
+    options.annotationProcessorPath = configurations.compileClasspath
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
         options.release = targetJavaVersion
     }
@@ -51,8 +53,4 @@ processResources {
     filesMatching('plugin.yml') {
         expand props
     }
-}
-
-tasks.withType(JavaCompile).configureEach {
-    options.annotationProcessorPath = configurations.compileClasspath
 }

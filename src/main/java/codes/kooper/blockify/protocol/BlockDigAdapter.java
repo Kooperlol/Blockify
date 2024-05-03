@@ -24,38 +24,33 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
     @Override
     public void onPacketPlayReceive(PacketPlayReceiveEvent event) {
         if (event.getPacketType() == PacketType.Play.Client.PLAYER_DIGGING) {
-            WrapperPlayClientPlayerDigging digging = new WrapperPlayClientPlayerDigging(event);
-            DiggingAction actionType = digging.getAction();
+            WrapperPlayClientPlayerDigging wrapper = new WrapperPlayClientPlayerDigging(event);
+            DiggingAction actionType = wrapper.getAction();
 
             Player player = (Player) event.getPlayer();
-            BlockifyPosition position = new BlockifyPosition(digging.getBlockPosition().getX(), digging.getBlockPosition().getY(), digging.getBlockPosition().getZ());
+            BlockifyPosition position = new BlockifyPosition(wrapper.getBlockPosition().getX(), wrapper.getBlockPosition().getY(), wrapper.getBlockPosition().getZ());
             List<Stage> stages = Blockify.instance.getStageManager().getStages(player.getUniqueId());
-            View view = stages.stream()
-                    .flatMap(stage -> stage.getViews().stream())
-                    .filter(view1 -> view1.hasBlock(position))
-                    .findFirst()
-                    .orElse(null);
-            if (view == null) return;
-            BlockData blockData = view.getBlock(position);
-
-            if (actionType == DiggingAction.START_DIGGING) {
-                Bukkit.getScheduler().runTask(Blockify.instance, () -> new BlockifyInteractEvent(player, position.toPosition(), blockData, view, view.getStage()).callEvent());
-                if (player.getGameMode() == GameMode.CREATIVE ||
-                        blockData.getMaterial().getHardness() == 0 ||
-                        ((blockData.getDestroySpeed(player.getInventory().getItemInMainHand(), true) >= blockData.getMaterial().getHardness() * 30) && !player.isFlying() ||
-                                (blockData.getDestroySpeed(player.getInventory().getItemInMainHand(), true) >= blockData.getMaterial().getHardness() * 150) && player.isFlying())) {
-                    if (!view.isBreakable() || player.getGameMode() == GameMode.ADVENTURE || player.getGameMode() == GameMode.SPECTATOR) {
-                        player.sendBlockChange(position.toLocation(player.getWorld()), player.getWorld().getBlockData(position.toLocation(player.getWorld())));
+            for (Stage stage : stages) {
+                for (View view : stage.getViews()) {
+                    if (view.hasBlock(position)) {
+                        BlockData blockData = view.getBlock(position);
+                        if (actionType == DiggingAction.FINISHED_DIGGING || actionType == DiggingAction.START_DIGGING && player.getGameMode() == GameMode.CREATIVE) {
+                            Bukkit.getScheduler().runTask(Blockify.instance, () -> new BlockifyInteractEvent(player, position.toPosition(), blockData, view, view.getStage()).callEvent());
+                            if (!view.isBreakable()) {
+                                player.sendBlockChange(position.toLocation(player.getWorld()), player.getWorld().getBlockData(position.toLocation(player.getWorld())));
+                                return;
+                            }
+                            Bukkit.getScheduler().runTask(Blockify.instance, () -> {
+                                BlockifyBreakEvent ghostBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
+                                ghostBreakEvent.callEvent();
+                                if (!ghostBreakEvent.isCancelled()) {
+                                    player.sendBlockChange(position.toLocation(player.getWorld()), Material.AIR.createBlockData());
+                                    view.setBlock(position, Material.AIR.createBlockData());
+                                }
+                            });
+                        }
                         return;
                     }
-                    Bukkit.getScheduler().runTask(Blockify.instance, () -> {
-                        BlockifyBreakEvent ghostBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
-                        ghostBreakEvent.callEvent();
-                        if (!ghostBreakEvent.isCancelled()) {
-                            player.sendBlockChange(position.toLocation(player.getWorld()), Material.AIR.createBlockData());
-                            view.setBlock(position, Material.AIR.createBlockData());
-                        }
-                    });
                 }
             }
         }

@@ -3,6 +3,7 @@ package codes.kooper.blockify.events;
 import codes.kooper.blockify.models.Stage;
 import codes.kooper.blockify.models.View;
 import io.papermc.paper.math.Position;
+import lombok.Getter;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
@@ -10,6 +11,7 @@ import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.jetbrains.annotations.NotNull;
 
+@Getter
 public class BlockifyBreakEvent extends Event implements Cancellable {
     private static final HandlerList HANDLERS = new HandlerList();
     private boolean cancelled = false;

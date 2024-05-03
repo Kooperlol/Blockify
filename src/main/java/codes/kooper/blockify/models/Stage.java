@@ -5,13 +5,13 @@ import codes.kooper.blockify.types.BlockifyChunk;
 import codes.kooper.blockify.types.BlockifyPosition;
 import lombok.Getter;
 import lombok.Setter;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.data.BlockData;
-import org.bukkit.entity.Player;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Getter
 @Setter
@@ -32,12 +32,12 @@ public class Stage {
         this.audience = audience;
     }
 
-    public boolean isPlayerWithinStage(Player player) {
-        return player.getWorld().equals(world) && player.getLocation().getBlockX() >= minPosition.getX() && player.getLocation().getBlockX() <= maxPosition.getX() && player.getLocation().getBlockY() >= minPosition.getY() && player.getLocation().getBlockY() <= maxPosition.getY() && player.getLocation().getBlockZ() >= minPosition.getZ() && player.getLocation().getBlockZ() <= maxPosition.getZ();
+    public boolean isLocationWithin(Location location) {
+        return location.getWorld().equals(world) && location.getBlockX() >= minPosition.getX() && location.getBlockX() <= maxPosition.getX() && location.getBlockY() >= minPosition.getY() && location.getBlockY() <= maxPosition.getY() && location.getBlockZ() >= minPosition.getZ() && location.getBlockZ() <= maxPosition.getZ();
     }
 
     public void sendBlocksToAudience() {
-        HashMap<BlockifyChunk, HashMap<BlockifyPosition, BlockData>> blocks = new HashMap<>();
+        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks = new ConcurrentHashMap<>();
         for (View view : views) {
             blocks.putAll(view.getBlocks());
         }
@@ -50,6 +50,15 @@ public class Stage {
 
     public void removeView(View view) {
         views.remove(view);
+    }
+
+    public View getView(String name) {
+        for (View view : views) {
+            if (view.getName().equalsIgnoreCase(name)) {
+                return view;
+            }
+        }
+        return null;
     }
 
     /**

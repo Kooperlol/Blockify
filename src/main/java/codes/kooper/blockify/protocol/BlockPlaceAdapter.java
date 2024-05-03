@@ -23,15 +23,15 @@ public class BlockPlaceAdapter extends SimplePacketListenerAbstract {
             BlockifyPosition position = new BlockifyPosition(wrapper.getBlockPosition().getX(), wrapper.getBlockPosition().getY(), wrapper.getBlockPosition().getZ());
             Player player = (Player) event.getPlayer();
             List<Stage> stages = Blockify.instance.getStageManager().getStages(player.getUniqueId());
-            View view = stages.stream()
-                    .flatMap(stage -> stage.getViews().stream())
-                    .filter(view1 -> view1.hasBlock(position))
-                    .findFirst()
-                    .orElse(null);
-            if (view == null) return;
-            if (!view.hasBlock(position)) return;
-            Bukkit.getScheduler().runTask(Blockify.instance, () -> new BlockifyPlaceEvent(player, position.toPosition(), view, view.getStage()).callEvent());
-            event.setCancelled(true);
+            for (Stage stage : stages) {
+                for (View view : stage.getViews()) {
+                    if (view.hasBlock(position)) {
+                        Bukkit.getScheduler().runTask(Blockify.instance, () -> new BlockifyPlaceEvent(player, position.toPosition(), view, stage).callEvent());
+                        event.setCancelled(true);
+                        return;
+                    }
+                }
+            }
         }
     }
 
