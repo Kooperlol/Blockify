@@ -43,4 +43,8 @@ public class BlockifyInteractEvent extends Event implements Cancellable {
     public @NotNull HandlerList getHandlers() {
         return HANDLERS;
     }
+
+    public static HandlerList getHandlerList() {
+        return HANDLERS;
+    }
 }
