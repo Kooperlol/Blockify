@@ -89,7 +89,7 @@ public class BlockChangeManager {
                 if (blockY >> 4 == chunkY) {
                     BlockData blockData = entry.getValue();
                     if (!blockDataToId.containsKey(blockData)) {
-                        blockDataToId.put(blockData, WrappedBlockState.getByString(PacketEvents.getAPI().getPlayerManager().getClientVersion(user), blockData.getAsString(false)).getGlobalId());
+                        blockDataToId.put(blockData, WrappedBlockState.getByString(PacketEvents.getAPI().getPlayerManager().getClientVersion(player), blockData.getAsString(false)).getGlobalId());
                     }
                     int id = blockDataToId.get(blockData);
                     int x = position.getX() & 0xF;
