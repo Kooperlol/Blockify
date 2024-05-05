@@ -33,15 +33,17 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
             // Loop through the stages and views to check if the chunk is in the view.
             for (Stage stage : stages) {
                 for (View view : stage.getViews()) {
+
+                    // Check if the view has any blocks in the bound in the first place
+                    if (!view.hasChunk(chunkX, chunkZ)) return;
                     BlockifyChunk blockifyChunk = new BlockifyChunk(chunkX, chunkZ);
+
                     // If the chunk is being sent to the player, return.
                     if (Blockify.getInstance().getBlockChangeManager().getChunksBeingSent().get(player.getUniqueId()) != null && Blockify.getInstance().getBlockChangeManager().getChunksBeingSent().get(player.getUniqueId()).contains(blockifyChunk.getChunkKey())) {
                         return;
                     }
-                    // If the view contains the chunk, send the chunk's blocks to the player.
-                    if (view.getBlocks().containsKey(blockifyChunk)) {
-                        Blockify.getInstance().getBlockChangeManager().sendChunkPacket(stage, player, blockifyChunk, view.getBlocks());
-                    }
+
+                    Blockify.getInstance().getBlockChangeManager().sendChunkPacket(stage, player, blockifyChunk, view.getBlocks());
                 }
             }
         }
