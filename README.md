@@ -10,22 +10,16 @@ Join the discord to stay updated and feel free to give feedback or suggestions o
 Discord: https://discord.gg/BKrSKqaAZp
 
 ## Features
-1. **Client-Sided Blocks Management**: Blockify can manage and create client-sided blocks. This is evident from the `BlockDigAdapter` and `ChunkLoadAdapter` classes, which handle block digging and chunk loading events.
-
-2. **Stage Management**: Blockify has different stages for an audience. Each stage has multiple "views", which represent different patterns within a stage.
-
-3. **Block Interaction Events**: The project handles block interaction events, such as starting to dig a block, as seen in the `BlockDigAdapter` class.
-
-4. **Block Breaking Events**: Blockify also handles block-breaking events, including checking if a block is breakable and sending block change updates to the player.
-
-5. **Chunk Loading**: The `ChunkLoadAdapter` class handles chunk-loading events, including sending block changes to the player.
-
-6. **Game Mode Checks**: The project checks the player's game mode and adjusts block-breaking speed accordingly.
-
-7. **Memory Management**: Blockify manages memory efficiently by using custom data types like `BlockifyPosition` and `BlockifyChunk`.
-8. **Skript Support**: Blockify has a Skript Addon, [SkBlockify](https://github.com/Kooperlol/SkBlockify), that allows you to use Skript to manage client-sided blocks.
-9. **Custom Events:** Blockify has a custom event `BlockifyBlockBreakEvent` that is called when a block is broken. 
-10. **Complex Block Patterns:** Blockify can handle complex block patterns using the `BlockifyPattern` class. In addition, it can handle setting crop ages and other custom block data.
+1. **Stage Management**: Blockify has different stages for an audience. Each stage has multiple "views", which represent different patterns within a stage.
+2. **Block Interaction Events**: The project handles block interaction events, such as starting to dig a block, as seen in the `BlockDigAdapter` class.
+3. **Block Breaking Events**: Blockify also handles block-breaking events, including checking if a block is breakable and sending block change updates to the player.
+4. **Chunk Loading**: The `ChunkLoadAdapter` class handles chunk-loading events, including sending block changes to the player.
+5. **Game Mode Checks**: The project checks the player's game mode and adjusts block-breaking speed accordingly.
+6. **Memory Management**: Blockify manages memory efficiently by using custom data types like `BlockifyPosition` and `BlockifyChunk`.
+7. **Skript Support**: Blockify has a Skript Addon, [SkBlockify](https://github.com/Kooperlol/SkBlockify), that allows you to use Skript to manage client-sided blocks.
+8. **Custom Events:** Blockify has a custom event `BlockifyBlockBreakEvent` that is called when a block is broken. 
+9. **Complex Block Patterns:** Blockify can handle complex block patterns using the `BlockifyPattern` class. In addition, it can handle setting crop ages and other custom block data.
+10. **Custom Mining Speeds:** Blockify allows for custom mining speeds which you can set for a player in an audience.
 
 ## Credits
 - **[Kooper](https://github.com/Kooperlol)**: Project Lead
