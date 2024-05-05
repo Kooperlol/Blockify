@@ -18,9 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Stage {
     private final String name;
     private final World world;
-    private BlockifyPosition maxPosition;
-    private BlockifyPosition minPosition;
+    private BlockifyPosition maxPosition, minPosition;
     private final Set<View> views;
+    private boolean chunkSorting = false;
     private final Audience audience;
 
     public Stage(String name, World world, BlockifyPosition pos1, BlockifyPosition pos2, Audience audience) {
@@ -45,6 +45,10 @@ public class Stage {
     }
 
     public void addView(View view) {
+        if (views.stream().anyMatch(v -> v.getName().equalsIgnoreCase(view.getName()))) {
+            Blockify.instance.getLogger().warning("View with name " + view.getName() + " already exists in stage " + name + "!");
+            return;
+        }
         views.add(view);
     }
 

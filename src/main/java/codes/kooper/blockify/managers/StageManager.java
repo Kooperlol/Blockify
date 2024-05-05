@@ -1,5 +1,6 @@
 package codes.kooper.blockify.managers;
 
+import codes.kooper.blockify.Blockify;
 import codes.kooper.blockify.events.CreateStageEvent;
 import codes.kooper.blockify.events.DeleteStageEvent;
 import codes.kooper.blockify.models.Stage;
@@ -15,6 +16,10 @@ public class StageManager {
     private final Map<String, Stage> stages = new HashMap<>();
 
     public void createStage(Stage stage) {
+        if (stages.containsKey(stage.getName())) {
+            Blockify.instance.getLogger().warning("Stage with name " + stage.getName() + " already exists!");
+            return;
+        }
         new CreateStageEvent(stage).callEvent();
         stages.put(stage.getName(), stage);
     }

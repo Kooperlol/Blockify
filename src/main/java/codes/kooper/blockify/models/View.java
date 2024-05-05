@@ -16,7 +16,7 @@ public class View {
     private final ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks;
     private final Stage stage;
     private final String name;
-    private boolean breakable = true;
+    private boolean breakable;
     private Pattern pattern;
 
     public View(String name, Stage stage, Pattern pattern, boolean breakable) {
