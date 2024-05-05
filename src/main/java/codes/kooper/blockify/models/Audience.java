@@ -59,7 +59,7 @@ public class Audience {
      */
     public void setMiningSpeed(UUID player, float speed) {
         if (speed <= 0 || speed == 1) {
-            Blockify.instance.getLogger().warning("Invalid mining speed for player " + player + ": " + speed);
+            Blockify.getInstance().getLogger().warning("Invalid mining speed for player " + player + ": " + speed);
             return;
         }
         miningSpeeds.put(player, speed);

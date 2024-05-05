@@ -34,7 +34,7 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
             BlockifyPosition position = new BlockifyPosition(wrapper.getBlockPosition().getX(), wrapper.getBlockPosition().getY(), wrapper.getBlockPosition().getZ());
 
             // Get stages the player is in. If the player is not in any stages, return.
-            List<Stage> stages = Blockify.instance.getStageManager().getStages(player.getUniqueId());
+            List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player.getUniqueId());
             if (stages == null || stages.isEmpty()) {
                 return;
             }
@@ -47,7 +47,7 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
                         BlockData blockData = view.getBlock(position);
 
                         // Call BlockifyInteractEvent to handle custom interaction
-                        Bukkit.getScheduler().runTask(Blockify.instance, () -> new BlockifyInteractEvent(player, position.toPosition(), blockData, view, view.getStage()).callEvent());
+                        Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new BlockifyInteractEvent(player, position.toPosition(), blockData, view, view.getStage()).callEvent());
 
                         // Check if block is breakable, if not, send block change packet to cancel the break
                         if (!view.isBreakable()) {
@@ -58,9 +58,9 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
 
                         // Check if player has custom mining speed, if so, handle custom digging, else handle normal digging
                         if (view.getStage().getAudience().getMiningSpeed(player.getUniqueId()) != 1) {
-                            Blockify.instance.getMiningUtils().handleCustomDigging(player, view, actionType, blockData, position);
+                            Blockify.getInstance().getMiningUtils().handleCustomDigging(player, view, actionType, blockData, position);
                         } else {
-                            Blockify.instance.getMiningUtils().handleNormalDigging(player, view, actionType, blockData, position);
+                            Blockify.getInstance().getMiningUtils().handleNormalDigging(player, view, actionType, blockData, position);
                         }
 
                         return;

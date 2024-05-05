@@ -60,7 +60,7 @@ public class Stage {
         for (View view : views) {
             blocks.putAll(view.getBlocks());
         }
-        Blockify.instance.getBlockChangeManager().sendBlockChanges(this, audience, blocks);
+        Blockify.getInstance().getBlockChangeManager().sendBlockChanges(this, audience, blocks);
     }
 
     /**
@@ -84,7 +84,7 @@ public class Stage {
                 }
             }
         }
-        Blockify.instance.getBlockChangeManager().sendBlockChanges(this, audience, blockChanges);
+        Blockify.getInstance().getBlockChangeManager().sendBlockChanges(this, audience, blockChanges);
     }
 
     /**
@@ -94,7 +94,7 @@ public class Stage {
      */
     public void addView(View view) {
         if (views.stream().anyMatch(v -> v.getName().equalsIgnoreCase(view.getName()))) {
-            Blockify.instance.getLogger().warning("View with name " + view.getName() + " already exists in stage " + name + "!");
+            Blockify.getInstance().getLogger().warning("View with name " + view.getName() + " already exists in stage " + name + "!");
             return;
         }
         views.add(view);
