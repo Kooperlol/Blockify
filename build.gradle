@@ -1,9 +1,16 @@
 plugins {
     id 'java'
+    id 'maven-publish'
 }
 
 group = 'codes.kooper'
 version = '1.0-SNAPSHOT'
+
+dependencies {
+    implementation 'org.projectlombok:lombok:1.18.28'
+    compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
+    compileOnly 'com.github.retrooper.packetevents:spigot:2.2.1'
+}
 
 repositories {
     mavenCentral()
@@ -16,13 +23,6 @@ repositories {
         url = "https://oss.sonatype.org/content/groups/public/"
     }
     maven { url 'https://repo.codemc.io/repository/maven-releases/' }
-}
-
-dependencies {
-    implementation 'org.projectlombok:lombok:1.18.28'
-    compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
-    compileOnly 'com.github.retrooper.packetevents:spigot:2.2.1'
-    implementation 'com.github.Kooperlol:Blockify:1.0.0-beta'
 }
 
 def targetJavaVersion = 17
@@ -40,14 +40,5 @@ tasks.withType(JavaCompile).configureEach {
     options.annotationProcessorPath = configurations.compileClasspath
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
         options.release = targetJavaVersion
-    }
-}
-
-processResources {
-    def props = [version: version]
-    inputs.properties props
-    filteringCharset 'UTF-8'
-    filesMatching('plugin.yml') {
-        expand props
     }
 }
