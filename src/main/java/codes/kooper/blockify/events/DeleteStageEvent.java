@@ -12,6 +12,11 @@ public class DeleteStageEvent extends Event {
     private static final HandlerList HANDLERS = new HandlerList();
     private final Stage stage;
 
+    /**
+     * Event that is called when a stage is deleted.
+     *
+     * @param stage The stage that was deleted.
+     */
     public DeleteStageEvent(Stage stage) {
         this.stage = stage;
     }

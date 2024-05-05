@@ -23,6 +23,15 @@ public class Stage {
     private boolean chunkSorting = false;
     private final Audience audience;
 
+    /**
+     * Create a new stage.
+     *
+     * @param name     Name of the stage
+     * @param world    World the stage is in
+     * @param pos1     First position of the stage
+     * @param pos2     Second position of the stage
+     * @param audience Audience to send blocks to
+     */
     public Stage(String name, World world, BlockifyPosition pos1, BlockifyPosition pos2, Audience audience) {
         this.name = name;
         this.world = world;
@@ -32,10 +41,18 @@ public class Stage {
         this.audience = audience;
     }
 
+
+    /**
+     * Check if a location is within the stage.
+     *
+     * @param location Location to check
+     * @return True if the location is within the stage
+     */
     public boolean isLocationWithin(Location location) {
         return location.getWorld().equals(world) && location.getBlockX() >= minPosition.getX() && location.getBlockX() <= maxPosition.getX() && location.getBlockY() >= minPosition.getY() && location.getBlockY() <= maxPosition.getY() && location.getBlockZ() >= minPosition.getZ() && location.getBlockZ() <= maxPosition.getZ();
     }
 
+    // Sends all blocks to the audience
     public void sendBlocksToAudience() {
         ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks = new ConcurrentHashMap<>();
         for (View view : views) {
@@ -44,6 +61,11 @@ public class Stage {
         Blockify.instance.getBlockChangeManager().sendBlockChanges(this, audience, blocks);
     }
 
+    /**
+     * Add a view to the stage.
+     *
+     * @param view View to add
+     */
     public void addView(View view) {
         if (views.stream().anyMatch(v -> v.getName().equalsIgnoreCase(view.getName()))) {
             Blockify.instance.getLogger().warning("View with name " + view.getName() + " already exists in stage " + name + "!");
@@ -52,10 +74,21 @@ public class Stage {
         views.add(view);
     }
 
+    /**
+     * Remove a view from the stage.
+     *
+     * @param view View to remove
+     */
     public void removeView(View view) {
         views.remove(view);
     }
 
+    /**
+     * Get a view by name.
+     *
+     * @param name Name of the view
+     * @return View or null if not found
+     */
     public View getView(String name) {
         for (View view : views) {
             if (view.getName().equalsIgnoreCase(name)) {

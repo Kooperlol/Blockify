@@ -9,6 +9,13 @@ import java.util.Set;
 
 public class BlockUtils {
 
+    /**
+     * Get all the blocks between two positions.
+     *
+     * @param pos1 The first position.
+     * @param pos2 The second position.
+     * @return A set of all the blocks between the two positions.
+     */
     public static Set<BlockifyPosition> getBlocksBetween(BlockifyPosition pos1, BlockifyPosition pos2) {
         Set<BlockifyPosition> positions = new HashSet<>();
         int minX = Math.min(pos1.getX(), pos2.getX());
@@ -27,6 +34,13 @@ public class BlockUtils {
         return positions;
     }
 
+    /**
+     * Set the age of a block.
+     *
+     * @param blockData The block data.
+     * @param age The age to set.
+     * @return The block data with the age set.
+     */
     public static BlockData setAge(BlockData blockData, int age) {
         Ageable ageable = (Ageable) blockData;
         ageable.setAge(age);
