@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'codes.kooper'
-version = '1.0.2-beta'
+version = '1.0.3-beta'
 
 dependencies {
     implementation 'org.projectlombok:lombok:1.18.28'
