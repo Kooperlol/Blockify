@@ -88,19 +88,22 @@ public class BlockChangeManager {
                 BlockifyChunk[] chunksToSend = blockChanges.keySet().toArray(new BlockifyChunk[0]);
                 // Create a task to send a chunk to the player every tick
                 blockChangeTasks.put(uuid, Bukkit.getScheduler().runTaskTimer(Blockify.getInstance(), () -> {
-                    // If the chunk index is greater than the length of the chunks to send array, cancel the task
-                    if (chunkIndex.get() >= chunksToSend.length) {
-                        blockChangeTasks.get(uuid).cancel();
-                        blockChangeTasks.remove(uuid);
-                        return;
+                    // Loop through the chunks per tick
+                    for (int i = 0; i < stage.getChunksPerTick(); i++) {
+                        // Check if the chunk index is greater than the chunks to send length
+                        if (chunkIndex.get() >= chunksToSend.length) {
+                            blockChangeTasks.get(uuid).cancel();
+                            blockChangeTasks.remove(uuid);
+                            return;
+                        }
+                        // Get the chunk from the chunks to send array
+                        BlockifyChunk chunk = chunksToSend[chunkIndex.get()];
+                        chunkIndex.getAndIncrement();
+                        // Check if the chunk is loaded, if not, return
+                        if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) return;
+                        // Send the chunk packet to the player
+                        Bukkit.getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
                     }
-                    // Get the chunk from the chunks to send array
-                    BlockifyChunk chunk = chunksToSend[chunkIndex.get()];
-                    chunkIndex.getAndIncrement();
-                    // Check if the chunk is loaded, if not, return
-                    if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) return;
-                    // Send the chunk packet to the player
-                    Bukkit.getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
                 }, 0L, 1L));
             }
         }
