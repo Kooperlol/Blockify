@@ -14,6 +14,12 @@ public class PlayerJoinStageEvent extends Event {
     private final Stage stage;
     private final Player player;
 
+    /**
+     * Event that is called when a player joins a stage.
+     *
+     * @param stage  The stage the player joined.
+     * @param player The player that joined the stage.
+     */
     public PlayerJoinStageEvent(Stage stage, Player player) {
         this.stage = stage;
         this.player = player;

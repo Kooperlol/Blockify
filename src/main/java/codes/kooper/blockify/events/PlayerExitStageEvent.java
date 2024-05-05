@@ -14,6 +14,12 @@ public class PlayerExitStageEvent extends Event {
     private final Stage stage;
     private final Player player;
 
+    /**
+     * Event that is called when a player exits a stage.
+     *
+     * @param stage  The stage the player exited.
+     * @param player The player that exited the stage.
+     */
     public PlayerExitStageEvent(Stage stage, Player player) {
         this.stage = stage;
         this.player = player;

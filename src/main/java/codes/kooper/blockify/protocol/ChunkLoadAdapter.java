@@ -18,21 +18,27 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
     public void onPacketPlaySend(PacketPlaySendEvent event) {
         if (event.getPacketType() == PacketType.Play.Server.CHUNK_DATA) {
             Player player = (Player) event.getPlayer();
+
+            // Wrapper for the chunk data packet
             WrapperPlayServerChunkData chunkData = new WrapperPlayServerChunkData(event);
             int chunkX = chunkData.getColumn().getX();
             int chunkZ = chunkData.getColumn().getZ();
-            List<Stage> stages = Blockify.instance.getStageManager().getStages(player.getUniqueId());
 
+            // Get the stages the player is in. If the player is not in any stages, return.
+            List<Stage> stages = Blockify.instance.getStageManager().getStages(player.getUniqueId());
             if (stages == null || stages.isEmpty()) {
                 return;
             }
 
+            // Loop through the stages and views to check if the chunk is in the view.
             for (Stage stage : stages) {
                 for (View view : stage.getViews()) {
                     BlockifyChunk blockifyChunk = new BlockifyChunk(chunkX, chunkZ);
+                    // If the chunk is being sent to the player, return.
                     if (Blockify.instance.getBlockChangeManager().getChunksBeingSent().get(player.getUniqueId()) != null && Blockify.instance.getBlockChangeManager().getChunksBeingSent().get(player.getUniqueId()).contains(blockifyChunk.getChunkKey())) {
                         return;
                     }
+                    // If the view contains the chunk, send the chunk's blocks to the player.
                     if (view.getBlocks().containsKey(blockifyChunk)) {
                         Blockify.instance.getBlockChangeManager().sendChunkPacket(stage, player, blockifyChunk, view.getBlocks());
                     }

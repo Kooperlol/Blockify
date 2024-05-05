@@ -14,6 +14,12 @@ public class PlayerEnterStageEvent extends Event {
     private final Stage stage;
     private final Player player;
 
+    /**
+     * Event that is called when a player enters a stage.
+     *
+     * @param stage  The stage the player entered.
+     * @param player The player that entered the stage.
+     */
     public PlayerEnterStageEvent(Stage stage, Player player) {
         this.stage = stage;
         this.player = player;

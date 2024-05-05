@@ -21,6 +21,15 @@ public class BlockifyInteractEvent extends Event implements Cancellable {
     private final View view;
     private final Stage stage;
 
+    /**
+     * Event that is called when a player interacts with a block in a stage.
+     *
+     * @param player The player that interacted with the block.
+     * @param position The position of the block that was interacted with.
+     * @param blockData The block data of the block that was interacted with.
+     * @param view The view that the player is currently in.
+     * @param stage The stage that the player is currently in.
+     */
     public BlockifyInteractEvent(Player player, Position position, BlockData blockData, View view, Stage stage) {
         this.player = player;
         this.position = position;

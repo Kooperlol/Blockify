@@ -18,6 +18,11 @@ public class OnBlockChangeSendEvent extends Event {
     private final Stage stage;
     private final ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks;
 
+    /**
+     * Event that is called when block(s) are being changed.
+     * @param stage The stage that the block change is happening in.
+     * @param blocks The blocks that are being changed.
+     */
     public OnBlockChangeSendEvent(Stage stage, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks) {
         this.stage = stage;
         this.blocks = blocks;

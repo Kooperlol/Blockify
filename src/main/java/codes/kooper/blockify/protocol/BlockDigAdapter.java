@@ -25,26 +25,38 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
     @Override
     public void onPacketPlayReceive(PacketPlayReceiveEvent event) {
         if (event.getPacketType() == PacketType.Play.Client.PLAYER_DIGGING) {
+            // Packet wrapper
             WrapperPlayClientPlayerDigging wrapper = new WrapperPlayClientPlayerDigging(event);
             DiggingAction actionType = wrapper.getAction();
 
+            // Extract information from wrapper
             Player player = (Player) event.getPlayer();
             BlockifyPosition position = new BlockifyPosition(wrapper.getBlockPosition().getX(), wrapper.getBlockPosition().getY(), wrapper.getBlockPosition().getZ());
+
+            // Get stages the player is in. If the player is not in any stages, return.
             List<Stage> stages = Blockify.instance.getStageManager().getStages(player.getUniqueId());
+            if (stages == null || stages.isEmpty()) {
+                return;
+            }
+
+            // Loop through all stages and views to find the block
             for (Stage stage : stages) {
                 for (View view : stage.getViews()) {
                     if (view.hasBlock(position)) {
+                        // Get block data from view
                         BlockData blockData = view.getBlock(position);
 
+                        // Call BlockifyInteractEvent to handle custom interaction
                         Bukkit.getScheduler().runTask(Blockify.instance, () -> new BlockifyInteractEvent(player, position.toPosition(), blockData, view, view.getStage()).callEvent());
 
-                        // Check if block is breakable
+                        // Check if block is breakable, if not, send block change packet to cancel the break
                         if (!view.isBreakable()) {
                             WrapperPlayServerBlockChange wrapperPlayServerBlockChange = new WrapperPlayServerBlockChange(new Vector3i(position.getX(), position.getY(), position.getZ()), SpigotConversionUtil.fromBukkitBlockData(blockData).getGlobalId());
                             PacketEvents.getAPI().getPlayerManager().sendPacket(player, wrapperPlayServerBlockChange);
                             return;
                         }
 
+                        // Check if player has custom mining speed, if so, handle custom digging, else handle normal digging
                         if (view.getStage().getAudience().getMiningSpeed(player.getUniqueId()) != 1) {
                             Blockify.instance.getMiningUtils().handleCustomDigging(player, view, actionType, blockData, position);
                         } else {

@@ -12,13 +12,20 @@ import java.util.concurrent.ConcurrentHashMap;
 @Getter
 @Setter
 public class View {
-
     private final ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks;
     private final Stage stage;
     private final String name;
     private boolean breakable;
     private Pattern pattern;
 
+    /**
+     * Constructor for the View class.
+     *
+     * @param name      The name of the view.
+     * @param stage     The stage the view is in.
+     * @param pattern   The pattern of the view.
+     * @param breakable Whether the view is breakable or not.
+     */
     public View(String name, Stage stage, Pattern pattern, boolean breakable) {
         this.name = name;
         this.blocks = new ConcurrentHashMap<>();
@@ -27,6 +34,13 @@ public class View {
         this.pattern = pattern;
     }
 
+    /**
+     * Get the highest block at a given x and z coordinate.
+     *
+     * @param x The x coordinate.
+     * @param z The z coordinate.
+     * @return The highest block at the given x and z coordinate.
+     */
     public BlockifyPosition getHighestBlock(int x, int z) {
         for (int y = stage.getMaxPosition().getY(); y >= stage.getMinPosition().getY(); y--) {
             BlockifyPosition position = new BlockifyPosition(x, y, z);
@@ -37,6 +51,13 @@ public class View {
         return null;
     }
 
+    /**
+     * Get the lowest block at a given x and z coordinate.
+     *
+     * @param x The x coordinate.
+     * @param z The z coordinate.
+     * @return The lowest block at the given x and z coordinate.
+     */
     public BlockifyPosition getLowestBlock(int x, int z) {
         for (int y = stage.getMinPosition().getY(); y <= stage.getMaxPosition().getY(); y++) {
             BlockifyPosition position = new BlockifyPosition(x, y, z);
@@ -47,10 +68,16 @@ public class View {
         return null;
     }
 
+    // Returns all blocks in the view
     public ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> getBlocks() {
         return new ConcurrentHashMap<>(blocks);
     }
 
+    /**
+     * Remove a block from the view.
+     *
+     * @param position The block to remove.
+     */
     public void removeBlock(BlockifyPosition position) {
         if (hasBlock(position)) {
             blocks.get(position.toBlockifyChunk()).remove(position);
@@ -60,12 +87,22 @@ public class View {
         }
     }
 
+    /**
+     * Remove a set of blocks from the view.
+     *
+     * @param positions The set of blocks to remove.
+     */
     public void removeBlocks(Set<BlockifyPosition> positions) {
         for (BlockifyPosition position : positions) {
             removeBlock(position);
         }
     }
 
+    /**
+     * Add a block to the view.
+     *
+     * @param position The block to add.
+     */
     public void addBlock(BlockifyPosition position) {
         if (!blocks.containsKey(position.toBlockifyChunk())) {
             blocks.put(position.toBlockifyChunk(), new ConcurrentHashMap<>());
@@ -73,16 +110,33 @@ public class View {
         blocks.get(position.toBlockifyChunk()).put(position, pattern.getRandomBlockData());
     }
 
+    /**
+     * Add a set of blocks to the view.
+     *
+     * @param positions The set of blocks to add.
+     */
     public void addBlocks(Set<BlockifyPosition> positions) {
         for (BlockifyPosition position : positions) {
             addBlock(position);
         }
     }
 
+    /**
+     * Check if a block is in the view.
+     *
+     * @param position The position of the block.
+     * @return Whether the block is in the view.
+     */
     public boolean hasBlock(BlockifyPosition position) {
         return blocks.containsKey(position.toBlockifyChunk()) && blocks.get(position.toBlockifyChunk()).containsKey(position);
     }
 
+    /**
+     * Check if a set of blocks are in the view.
+     *
+     * @param positions The set of blocks to check.
+     * @return Whether the set of blocks are in the view.
+     */
     public boolean hasBlocks(Set<BlockifyPosition> positions) {
         for (BlockifyPosition position : positions) {
             if (!hasBlock(position)) {
@@ -92,24 +146,46 @@ public class View {
         return true;
     }
 
+    /**
+     * Get the block data at a given position.
+     *
+     * @param position The position of the block.
+     * @return The block data at the given position.
+     */
     public BlockData getBlock(BlockifyPosition position) {
         return blocks.get(position.toBlockifyChunk()).get(position);
     }
 
+
+    /**
+     * Check if a chunk is in the view.
+     *
+     * @param x The x coordinate of the chunk.
+     * @param z The z coordinate of the chunk.
+     * @return Whether the chunk is in the view.
+     */
     public boolean hasChunk(int x, int z) {
         return blocks.containsKey(new BlockifyChunk(x, z));
     }
 
+    /**
+     * Set positions to a given block data.
+     *
+     * @param positions The set of positions to set.
+     * @param blockData The block data.
+     */
     public void setBlocks(Set<BlockifyPosition> positions, BlockData blockData) {
         for (BlockifyPosition position : positions) {
             setBlock(position, blockData);
         }
     }
 
-    public void setBreakable(boolean breakable) {
-        this.breakable = breakable;
-    }
-
+    /**
+     * Set a position to a given block data.
+     *
+     * @param position  The position of the block.
+     * @param blockData The block data.
+     */
     public void setBlock(BlockifyPosition position, BlockData blockData) {
         if (hasBlock(position)) {
             blocks.get(position.toBlockifyChunk()).put(position, blockData);

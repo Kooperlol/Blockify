@@ -17,6 +17,14 @@ public class BlockifyPlaceEvent extends Event {
     private final View view;
     private final Stage stage;
 
+    /**
+     * Event that is called when a player places a block in the Blockify plugin.
+     *
+     * @param player The player that placed the block.
+     * @param position The position of the block that was placed.
+     * @param view The view that the player is currently in.
+     * @param stage The stage that the player is currently in.
+     */
     public BlockifyPlaceEvent(Player player, Position position, View view, Stage stage) {
         this.player = player;
         this.position = position;

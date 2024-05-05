@@ -10,6 +10,11 @@ public class BlockifyBlockStage {
     private long lastUpdated;
     private int task = 0;
 
+    /**
+     * Stores data for a block stage
+     * @param stage The stage of the block
+     * @param lastUpdated The last time the block was updated
+     */
     public BlockifyBlockStage(byte stage, long lastUpdated) {
         this.stage = stage;
         this.lastUpdated = lastUpdated;
