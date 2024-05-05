@@ -40,14 +40,14 @@ public class MiningUtils {
      */
     public void handleCustomDigging(Player player, View view, DiggingAction actionType, BlockData blockData, BlockifyPosition position) {
         // Affect player with mining fatigue
-        Bukkit.getScheduler().runTask(Blockify.instance, () -> player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_DIGGING, Integer.MAX_VALUE, -1, true, false, false)));
+        Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_DIGGING, Integer.MAX_VALUE, -1, true, false, false)));
 
         // Update block stage periodically
         if (!blockStages.containsKey(position)) {
             blockStages.put(position, new BlockifyBlockStage((byte) 0, System.currentTimeMillis()));
         }
         if (blockStages.get(position).getTask() == 0) {
-            blockStages.get(position).setTask(Bukkit.getScheduler().runTaskTimerAsynchronously(Blockify.instance, () -> {
+            blockStages.get(position).setTask(Bukkit.getScheduler().runTaskTimerAsynchronously(Blockify.getInstance(), () -> {
                 if (player.isOnline() && blockStages.containsKey(position)) {
                     updateBlockStage(player, position, blockData, view);
                 }
@@ -58,7 +58,7 @@ public class MiningUtils {
         if (actionType == DiggingAction.CANCELLED_DIGGING && blockStages.containsKey(position)) {
             Bukkit.getScheduler().cancelTask(blockStages.get(position).getTask());
             blockStages.get(position).setTask(0);
-            Bukkit.getScheduler().runTask(Blockify.instance, () -> player.removePotionEffect(PotionEffectType.SLOW_DIGGING));
+            Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> player.removePotionEffect(PotionEffectType.SLOW_DIGGING));
             return;
         }
 
@@ -93,13 +93,13 @@ public class MiningUtils {
 
         // Block break functionality
         if (actionType == DiggingAction.FINISHED_DIGGING) {
-            Bukkit.getScheduler().runTask(Blockify.instance, () -> {
+            Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> {
                 // Call BlockifyBreakEvent
                 BlockifyBreakEvent ghostBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
                 ghostBreakEvent.callEvent();
                 // If block is not cancelled, break the block, otherwise, revert the block
                 if (!ghostBreakEvent.isCancelled()) {
-                    Blockify.instance.getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position, Material.AIR.createBlockData());
+                    Blockify.getInstance().getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position, Material.AIR.createBlockData());
                     view.setBlock(position, Material.AIR.createBlockData());
                 } else {
                     player.sendBlockChange(position.toLocation(player.getWorld()), blockData);
@@ -164,7 +164,7 @@ public class MiningUtils {
      */
     public void breakCustomBlock(Player player, BlockifyPosition position, BlockData blockData, View view) {
         // Run synchronously as using Spigot API
-        Bukkit.getScheduler().runTask(Blockify.instance, () -> {
+        Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> {
             // Call BlockifyBreakEvent
             BlockifyBreakEvent ghostBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
             ghostBreakEvent.callEvent();
@@ -177,7 +177,7 @@ public class MiningUtils {
             player.removePotionEffect(PotionEffectType.SLOW_DIGGING);
             // If block is not cancelled, break the block, otherwise, revert the block
             if (!ghostBreakEvent.isCancelled()) {
-                Blockify.instance.getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position, Material.AIR.createBlockData());
+                Blockify.getInstance().getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position, Material.AIR.createBlockData());
                 view.setBlock(position, Material.AIR.createBlockData());
             } else {
                 player.sendBlockChange(position.toLocation(player.getWorld()), blockData);

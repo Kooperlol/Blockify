@@ -21,7 +21,7 @@ public class StageManager {
      */
     public void createStage(Stage stage) {
         if (stages.containsKey(stage.getName())) {
-            Blockify.instance.getLogger().warning("Stage with name " + stage.getName() + " already exists!");
+            Blockify.getInstance().getLogger().warning("Stage with name " + stage.getName() + " already exists!");
             return;
         }
         new CreateStageEvent(stage).callEvent();

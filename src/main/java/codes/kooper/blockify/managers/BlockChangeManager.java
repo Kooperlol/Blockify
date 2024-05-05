@@ -61,7 +61,7 @@ public class BlockChangeManager {
         if (blockChanges.isEmpty()) {
             return;
         }
-        Bukkit.getScheduler().runTask(Blockify.instance, () -> new OnBlockChangeSendEvent(stage, blockChanges).callEvent());
+        Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new OnBlockChangeSendEvent(stage, blockChanges).callEvent());
 
         // If there is only one block change, send it to the player directly
         if (blockChanges.size() == 1) {
@@ -87,7 +87,7 @@ public class BlockChangeManager {
                 // Create an array of chunks to send from the block changes map
                 BlockifyChunk[] chunksToSend = blockChanges.keySet().toArray(new BlockifyChunk[0]);
                 // Create a task to send a chunk to the player every tick
-                blockChangeTasks.put(uuid, Bukkit.getScheduler().runTaskTimer(Blockify.instance, () -> {
+                blockChangeTasks.put(uuid, Bukkit.getScheduler().runTaskTimer(Blockify.getInstance(), () -> {
                     // If the chunk index is greater than the length of the chunks to send array, cancel the task
                     if (chunkIndex.get() >= chunksToSend.length) {
                         blockChangeTasks.get(uuid).cancel();
@@ -100,7 +100,7 @@ public class BlockChangeManager {
                     // Check if the chunk is loaded, if not, return
                     if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) return;
                     // Send the chunk packet to the player
-                    Bukkit.getScheduler().runTaskAsynchronously(Blockify.instance, () -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
+                    Bukkit.getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
                 }, 0L, 1L));
             }
         }
@@ -152,7 +152,7 @@ public class BlockChangeManager {
             // Send the packet to the player
             WrapperPlayServerMultiBlockChange.EncodedBlock[] encodedBlocksArray = encodedBlocks.toArray(new WrapperPlayServerMultiBlockChange.EncodedBlock[0]);
             WrapperPlayServerMultiBlockChange wrapperPlayServerMultiBlockChange = new WrapperPlayServerMultiBlockChange(new Vector3i(chunk.x(), chunkY, chunk.z()), true, encodedBlocksArray);
-            Bukkit.getScheduler().runTask(Blockify.instance, () -> user.sendPacket(wrapperPlayServerMultiBlockChange));
+            Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> user.sendPacket(wrapperPlayServerMultiBlockChange));
         }
         // Remove the chunk from the chunks being sent list
         chunksBeingSent.get(player.getUniqueId()).remove(chunk.getChunkKey());

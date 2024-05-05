@@ -17,7 +17,6 @@ import org.bukkit.scheduler.BukkitTask;
 
 @Getter
 public final class Blockify extends JavaPlugin {
-    public static Blockify instance;
     private StageManager stageManager;
     private BlockChangeManager blockChangeManager;
     private MiningUtils miningUtils;
@@ -33,7 +32,6 @@ public final class Blockify extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        instance = this;
         new Metrics(this, 21782);
         getLogger().info("Blockify has been enabled!");
 
@@ -52,5 +50,9 @@ public final class Blockify extends JavaPlugin {
         getLogger().info("Blockify has been disabled!");
         blockChangeManager.getBlockChangeTasks().values().forEach(BukkitTask::cancel);
         PacketEvents.getAPI().terminate();
+    }
+
+    public static Blockify getInstance() {
+        return getPlugin(Blockify.class);
     }
 }

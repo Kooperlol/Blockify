@@ -25,7 +25,7 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
             int chunkZ = chunkData.getColumn().getZ();
 
             // Get the stages the player is in. If the player is not in any stages, return.
-            List<Stage> stages = Blockify.instance.getStageManager().getStages(player.getUniqueId());
+            List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player.getUniqueId());
             if (stages == null || stages.isEmpty()) {
                 return;
             }
@@ -35,12 +35,12 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
                 for (View view : stage.getViews()) {
                     BlockifyChunk blockifyChunk = new BlockifyChunk(chunkX, chunkZ);
                     // If the chunk is being sent to the player, return.
-                    if (Blockify.instance.getBlockChangeManager().getChunksBeingSent().get(player.getUniqueId()) != null && Blockify.instance.getBlockChangeManager().getChunksBeingSent().get(player.getUniqueId()).contains(blockifyChunk.getChunkKey())) {
+                    if (Blockify.getInstance().getBlockChangeManager().getChunksBeingSent().get(player.getUniqueId()) != null && Blockify.getInstance().getBlockChangeManager().getChunksBeingSent().get(player.getUniqueId()).contains(blockifyChunk.getChunkKey())) {
                         return;
                     }
                     // If the view contains the chunk, send the chunk's blocks to the player.
                     if (view.getBlocks().containsKey(blockifyChunk)) {
-                        Blockify.instance.getBlockChangeManager().sendChunkPacket(stage, player, blockifyChunk, view.getBlocks());
+                        Blockify.getInstance().getBlockChangeManager().sendChunkPacket(stage, player, blockifyChunk, view.getBlocks());
                     }
                 }
             }

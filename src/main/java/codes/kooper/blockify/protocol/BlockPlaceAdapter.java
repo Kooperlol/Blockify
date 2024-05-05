@@ -25,7 +25,7 @@ public class BlockPlaceAdapter extends SimplePacketListenerAbstract {
             Player player = (Player) event.getPlayer();
 
             // Get the stages the player is in. If the player is not in any stages, return.
-            List<Stage> stages = Blockify.instance.getStageManager().getStages(player.getUniqueId());
+            List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player.getUniqueId());
             if (stages == null || stages.isEmpty()) {
                 return;
             }
@@ -35,7 +35,7 @@ public class BlockPlaceAdapter extends SimplePacketListenerAbstract {
                 for (View view : stage.getViews()) {
                     if (view.hasBlock(position)) {
                         // Call the event and cancel the placement
-                        Bukkit.getScheduler().runTask(Blockify.instance, () -> new BlockifyPlaceEvent(player, position.toPosition(), view, stage).callEvent());
+                        Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new BlockifyPlaceEvent(player, position.toPosition(), view, stage).callEvent());
                         event.setCancelled(true);
                         return;
                     }
