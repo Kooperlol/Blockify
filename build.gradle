@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'codes.kooper'
-version = '1.0.3-beta'
+version = '1.0.4-beta'
 
 dependencies {
     implementation 'org.projectlombok:lombok:1.18.28'
@@ -37,5 +37,18 @@ tasks.withType(JavaCompile).configureEach {
     options.annotationProcessorPath = configurations.compileClasspath
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
         options.release = targetJavaVersion
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.deprecation = true
+    options.compilerArgs += '-Xlint:deprecation'
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
     }
 }
