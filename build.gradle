@@ -5,10 +5,6 @@ plugins {
 group = 'codes.kooper'
 version = '1.0-SNAPSHOT'
 
-tasks.withType(Jar).configureEach {
-    destinationDirectory = file('C:\\Users\\sworn\\Desktop\\Blockify-Dev\\plugins')
-}
-
 repositories {
     mavenCentral()
     maven {
@@ -26,6 +22,7 @@ dependencies {
     implementation 'org.projectlombok:lombok:1.18.28'
     compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
     compileOnly 'com.github.retrooper.packetevents:spigot:2.2.1'
+    implementation 'com.github.Kooperlol:Blockify:Tag'
 }
 
 def targetJavaVersion = 17
@@ -52,5 +49,13 @@ processResources {
     filteringCharset 'UTF-8'
     filesMatching('plugin.yml') {
         expand props
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
     }
 }
