@@ -1,4 +1,6 @@
-![blockify.png](public/blockify.png)
+<div style="text-align: center;">
+    <img src="public/blockify.png" width="320" height="320" alt="logo">
+</div>
 
 # About
 Ever wondered how servers like FadeCloud or AkumaMC do private farms and mines?
