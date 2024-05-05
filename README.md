@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="public/blockify.png" width="640" height="640">
+    <img src="public/blockify.png" width="320" height="320">
 </div>
 
 # About
