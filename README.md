@@ -1,5 +1,5 @@
-<div style="text-align: center;">
-    <img src="public/blockify.png" width="320" height="320" alt="logo">
+<div align="center">
+    <img src="public/blockify.png" width="640" height="640">
 </div>
 
 # About
