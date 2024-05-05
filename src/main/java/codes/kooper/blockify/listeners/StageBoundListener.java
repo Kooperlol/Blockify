@@ -72,6 +72,7 @@ public class StageBoundListener implements Listener {
             Player player = Blockify.instance.getServer().getPlayer(uuid);
             if (player == null) continue;
             event.getPlayer().hidePlayer(Blockify.instance, player);
+
         }
     }
 
