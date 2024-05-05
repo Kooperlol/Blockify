@@ -195,4 +195,39 @@ public class View {
             blocks.get(position.toBlockifyChunk()).put(position, blockData);
         }
     }
+
+    /**
+     * Reset a block to a random block data from the pattern.
+     *
+     * @param position The position of the block.
+     */
+    public void resetBlock(BlockifyPosition position) {
+        if (hasBlock(position)) {
+            blocks.get(position.toBlockifyChunk()).put(position, pattern.getRandomBlockData());
+        }
+    }
+
+    /**
+     * Reset a set of blocks to random block data from the pattern.
+     * Call this method asynchronously if you are resetting a large number of blocks.
+     *
+     * @param positions The set of blocks to reset.
+     */
+    public void resetBlocks(Set<BlockifyPosition> positions) {
+        for (BlockifyPosition position : positions) {
+            resetBlock(position);
+        }
+    }
+
+    /**
+     * Reset all blocks in the view to random block data from the pattern.
+     * Call this method asynchronously.
+     */
+    public void resetViewBlocks() {
+        for (BlockifyChunk chunk : blocks.keySet()) {
+            for (BlockifyPosition position : blocks.get(chunk).keySet()) {
+                blocks.get(chunk).put(position, pattern.getRandomBlockData());
+            }
+        }
+    }
 }
