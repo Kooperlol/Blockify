@@ -122,8 +122,9 @@ public class StageBoundListener implements Listener {
         for (UUID uuid : event.getStage().getAudience().getPlayers()) {
             Player player = Blockify.instance.getServer().getPlayer(uuid);
             if (player == null) continue;
-            event.getPlayer().hidePlayer(Blockify.instance, player);
             player.hidePlayer(Blockify.instance, event.getPlayer());
+            if (!event.getStage().isLocationWithin(player.getLocation())) continue;
+            event.getPlayer().hidePlayer(Blockify.instance, player);
         }
     }
 
