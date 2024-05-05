@@ -99,7 +99,7 @@ public class MiningUtils {
                 ghostBreakEvent.callEvent();
                 // If block is not cancelled, break the block, otherwise, revert the block
                 if (!ghostBreakEvent.isCancelled()) {
-                    player.sendBlockChange(position.toLocation(player.getWorld()), Material.AIR.createBlockData());
+                    Blockify.instance.getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position, Material.AIR.createBlockData());
                     view.setBlock(position, Material.AIR.createBlockData());
                 } else {
                     player.sendBlockChange(position.toLocation(player.getWorld()), blockData);
@@ -177,7 +177,7 @@ public class MiningUtils {
             player.removePotionEffect(PotionEffectType.SLOW_DIGGING);
             // If block is not cancelled, break the block, otherwise, revert the block
             if (!ghostBreakEvent.isCancelled()) {
-                player.sendBlockChange(position.toLocation(player.getWorld()), Material.AIR.createBlockData());
+                Blockify.instance.getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position, Material.AIR.createBlockData());
                 view.setBlock(position, Material.AIR.createBlockData());
             } else {
                 player.sendBlockChange(position.toLocation(player.getWorld()), blockData);

@@ -89,6 +89,7 @@ public class View {
 
     /**
      * Remove a set of blocks from the view.
+     * Call this method asynchronously if you are removing a large number of blocks.
      *
      * @param positions The set of blocks to remove.
      */
@@ -112,6 +113,7 @@ public class View {
 
     /**
      * Add a set of blocks to the view.
+     * Call this method asynchronously if you are adding a large number of blocks.
      *
      * @param positions The set of blocks to add.
      */
@@ -133,6 +135,7 @@ public class View {
 
     /**
      * Check if a set of blocks are in the view.
+     * Call this method asynchronously if you are checking a large number of blocks.
      *
      * @param positions The set of blocks to check.
      * @return Whether the set of blocks are in the view.
@@ -170,6 +173,7 @@ public class View {
 
     /**
      * Set positions to a given block data.
+     * Call this method asynchronously if you are setting a large number of blocks.
      *
      * @param positions The set of positions to set.
      * @param blockData The block data.

@@ -35,6 +35,22 @@ public class BlockChangeManager {
     }
 
     /**
+     * Sends a block change to the audience.
+     *
+     * @param stage        the stage
+     * @param audience     the audience
+     * @param position     the position
+     * @param blockData    the block data
+     */
+    public void sendBlockChange(Stage stage, Audience audience, BlockifyPosition position, BlockData blockData) {
+        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = new ConcurrentHashMap<>();
+        BlockifyChunk chunk = new BlockifyChunk(position.getX() >> 4, position.getZ() >> 4);
+        blockChanges.put(chunk, new ConcurrentHashMap<>());
+        blockChanges.get(chunk).put(position, blockData);
+        sendBlockChanges(stage, audience, blockChanges);
+    }
+
+    /**
      * Sends block changes to the audience.
      *
      * @param stage        the stage

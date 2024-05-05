@@ -11,6 +11,7 @@ public class BlockUtils {
 
     /**
      * Get all the blocks between two positions.
+     * Call this method asynchronously if you are going to be getting a large amount of blocks.
      *
      * @param pos1 The first position.
      * @param pos2 The second position.

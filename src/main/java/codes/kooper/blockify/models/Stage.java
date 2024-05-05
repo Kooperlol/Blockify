@@ -52,13 +52,39 @@ public class Stage {
         return location.getWorld().equals(world) && location.getBlockX() >= minPosition.getX() && location.getBlockX() <= maxPosition.getX() && location.getBlockY() >= minPosition.getY() && location.getBlockY() <= maxPosition.getY() && location.getBlockZ() >= minPosition.getZ() && location.getBlockZ() <= maxPosition.getZ();
     }
 
-    // Sends all blocks to the audience
+    /**
+     * Send blocks to the audience. Should be called asynchronously.
+     */
     public void sendBlocksToAudience() {
         ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks = new ConcurrentHashMap<>();
         for (View view : views) {
             blocks.putAll(view.getBlocks());
         }
         Blockify.instance.getBlockChangeManager().sendBlockChanges(this, audience, blocks);
+    }
+
+    /**
+     * Refresh blocks to the audience. Should be called after modifying blocks.
+     * Should be called asynchronously.
+     *
+     * @param blocks Blocks to refresh to the audience.
+     */
+    public void refreshBlocksToAudience(Set<BlockifyPosition> blocks) {
+        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = new ConcurrentHashMap<>();
+        for (View view : views) {
+            for (BlockifyPosition position : blocks) {
+                if (view.hasBlock(position)) {
+                    if (blockChanges.containsKey(position.toBlockifyChunk())) {
+                        blockChanges.get(position.toBlockifyChunk()).put(position, view.getBlock(position));
+                    } else {
+                        ConcurrentHashMap<BlockifyPosition, BlockData> blockData = new ConcurrentHashMap<>();
+                        blockData.put(position, view.getBlock(position));
+                        blockChanges.put(position.toBlockifyChunk(), blockData);
+                    }
+                }
+            }
+        }
+        Blockify.instance.getBlockChangeManager().sendBlockChanges(this, audience, blockChanges);
     }
 
     /**
@@ -100,6 +126,7 @@ public class Stage {
 
     /**
      * Get all chunks that are being used by this stage.
+     * If a lot of chunks are present, it is recommended to use this method asynchronously.
      *
      * @return Set of chunks
      */
