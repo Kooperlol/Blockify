@@ -50,6 +50,6 @@ public final class Blockify extends JavaPlugin {
     }
 
     public static Blockify getInstance() {
-        return getPlugin(Blockify.class);
+        return Blockify.getPlugin(Blockify.class);
     }
 }
