@@ -2,14 +2,13 @@
     <img src="public/blockify.png" width="320" height="320">
 </div>
 
+[![](https://img.shields.io/github/license/kooperlol/blockify.svg)](https://github.com/Kooperlol/Blockify/blob/master/LICENSE.md) [![](https://jitpack.io/v/Kooperlol/Blockify.svg)](https://jitpack.io/#Kooperlol/Blockify) [![](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/HeH2CuFCjz)
+
 # About
 Ever wondered how servers like FadeCloud or AkumaMC do private farms and mines?
 Well, let Blockify take care of it for you! Blockify is a public library that can manage and create client-sided blocks.
 
-Blockify is in Alpha, so there are no releases or proper documentation.
-Join the discord to stay updated and feel free to give feedback or suggestions on how this resource can be improved.
-
-Discord: https://discord.gg/BKrSKqaAZp
+Check out the [Wiki](https://github.com/Kooperlol/Blockify/wiki) to get started, and join the [Discord](https://discord.gg/BKrSKqaAZp) for help.
 
 ## Features
 1. **Stage Management**: Blockify has different stages for an audience. Each stage has multiple "views", which represent different patterns within a stage.
@@ -35,6 +34,3 @@ Discord: https://discord.gg/BKrSKqaAZp
 
 ## Statistics
 Check out our [bStats page](https://bstats.org/plugin/bukkit/Blockify/21782)
-
-## License
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
