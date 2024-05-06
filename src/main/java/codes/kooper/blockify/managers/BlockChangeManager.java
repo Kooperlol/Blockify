@@ -108,19 +108,25 @@ public class BlockChangeManager {
 
             // Create a task to send a chunk to the player every tick
             blockChangeTasks.put(uuid, Bukkit.getScheduler().runTaskTimer(Blockify.getInstance(), () -> {
-                // Loop through the chunks per tick
+                // Loop through chunks per tick
                 for (int i = 0; i < stage.getChunksPerTick(); i++) {
-                    // Check if the chunk index is greater than the chunks to send length
+                    // If the chunk index is greater than the chunks to send length
                     if (chunkIndex.get() >= chunksToSend.size()) {
-                        blockChangeTasks.get(uuid).cancel();
-                        blockChangeTasks.remove(uuid);
+                        // Safely cancel the task and remove it from the map
+                        blockChangeTasks.computeIfPresent(uuid, (key, task) -> {
+                            task.cancel();
+                            return null; // Remove the task
+                        });
                         return;
                     }
+
                     // Get the chunk from the chunks to send array
                     BlockifyChunk chunk = chunksToSend.get(chunkIndex.get());
                     chunkIndex.getAndIncrement();
-                    // Check if the chunk is loaded, if not, return
+
+                    // Check if the chunk is loaded; if not, return
                     if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) return;
+
                     // Send the chunk packet to the player
                     Bukkit.getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
                 }
@@ -137,33 +143,38 @@ public class BlockChangeManager {
      * @param blockChanges  the block changes
      */
     public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
-        // Get the user from packet events API
+        // Get the user from PacketEvents API
         User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
 
-        // Add the chunk to the chunks being sent list
+        // Initialize the chunksBeingSent map for this player if not present
         chunksBeingSent.computeIfAbsent(player.getUniqueId(), k -> new Vector<>());
-        if (chunksBeingSent.get(player.getUniqueId()).contains(chunk.getChunkKey())) {
+
+        Vector<Long> playerChunksBeingSent = chunksBeingSent.get(player.getUniqueId());
+
+        // Ensure the chunk isn't already being sent
+        if (playerChunksBeingSent.contains(chunk.getChunkKey())) {
             return;
         }
-        chunksBeingSent.get(player.getUniqueId()).add(chunk.getChunkKey());
+        // Add this chunk to the chunks being sent list
+        playerChunksBeingSent.add(chunk.getChunkKey());
 
         // Loop through the chunks y positions
         for (int chunkY = stage.getMinPosition().getY() >> 4; chunkY <= stage.getMaxPosition().getY() >> 4; chunkY++) {
-            // Create a list of encoded blocks for packet events wrapper
+            // Create a list of encoded blocks for PacketEvents wrapper
             List<WrapperPlayServerMultiBlockChange.EncodedBlock> encodedBlocks = new ArrayList<>();
+
             // Loop through the blocks to send
             for (Map.Entry<BlockifyPosition, BlockData> entry : blockChanges.get(chunk).entrySet()) {
                 BlockifyPosition position = entry.getKey();
                 int blockY = position.getY();
+
                 // Check if the block is in the current y section
                 if (blockY >> 4 == chunkY) {
-                    // Get the block data id from the block data to id map
                     BlockData blockData = entry.getValue();
-                    if (!blockDataToId.containsKey(blockData)) {
-                        blockDataToId.put(blockData, WrappedBlockState.getByString(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), blockData.getAsString(false)).getGlobalId());
-                    }
+                    // Get the block data ID
+                    blockDataToId.computeIfAbsent(blockData, bd -> WrappedBlockState.getByString(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), bd.getAsString(false)).getGlobalId());
+
                     int id = blockDataToId.get(blockData);
-                    // Get the x, y, z positions of the block relative to the chunk
                     int x = position.getX() & 0xF;
                     int y = position.getY();
                     int z = position.getZ() & 0xF;
@@ -171,16 +182,19 @@ public class BlockChangeManager {
                     encodedBlocks.add(new WrapperPlayServerMultiBlockChange.EncodedBlock(id, x, y, z));
                 }
             }
+
             // Send the packet to the player
             WrapperPlayServerMultiBlockChange.EncodedBlock[] encodedBlocksArray = encodedBlocks.toArray(new WrapperPlayServerMultiBlockChange.EncodedBlock[0]);
-            WrapperPlayServerMultiBlockChange wrapperPlayServerMultiBlockChange = new WrapperPlayServerMultiBlockChange(new Vector3i(chunk.x(), chunkY, chunk.z()), true, encodedBlocksArray);
-            Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> user.sendPacket(wrapperPlayServerMultiBlockChange));
+            WrapperPlayServerMultiBlockChange wrapper = new WrapperPlayServerMultiBlockChange(new Vector3i(chunk.x(), chunkY, chunk.z()), true, encodedBlocksArray);
+            Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> user.sendPacket(wrapper));
         }
+
         // Remove the chunk from the chunks being sent list
-        chunksBeingSent.get(player.getUniqueId()).remove(chunk.getChunkKey());
-        if (chunksBeingSent.get(player.getUniqueId()).isEmpty()) {
+        playerChunksBeingSent.remove(chunk.getChunkKey());
+        if (playerChunksBeingSent.isEmpty()) {
             chunksBeingSent.remove(player.getUniqueId());
         }
     }
+
 
 }
