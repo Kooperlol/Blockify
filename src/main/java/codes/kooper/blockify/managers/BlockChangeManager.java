@@ -13,6 +13,7 @@ import com.github.retrooper.packetevents.util.Vector3i;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerMultiBlockChange;
 import lombok.Getter;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
@@ -81,28 +82,49 @@ public class BlockChangeManager {
         // Send multiple block changes to the players
         for (UUID uuid : audience.getPlayers()) {
             Player onlinePlayer = Bukkit.getPlayer(uuid);
+            if (onlinePlayer == null) continue;
+            Location playerLocation = onlinePlayer.getLocation();
+
             // The chunk index is used to keep track of the current chunk being sent
             AtomicInteger chunkIndex = new AtomicInteger(0);
-            if (onlinePlayer != null) {
-                // Create an array of chunks to send from the block changes map
-                BlockifyChunk[] chunksToSend = blockChanges.keySet().toArray(new BlockifyChunk[0]);
-                // Create a task to send a chunk to the player every tick
-                blockChangeTasks.put(uuid, Bukkit.getScheduler().runTaskTimer(Blockify.getInstance(), () -> {
-                    // If the chunk index is greater than the length of the chunks to send array, cancel the task
-                    if (chunkIndex.get() >= chunksToSend.length) {
+            // Create an array of chunks to send from the block changes map
+            List<BlockifyChunk> chunksToSend = new ArrayList<>(List.of(blockChanges.keySet().toArray(new BlockifyChunk[0])));
+            chunksToSend.sort((chunk1, chunk2) -> {
+                // Get distance from chunks to player
+                int x = playerLocation.getBlockX() / 16;
+                int z = playerLocation.getBlockZ() / 16;
+                int chunkX1 = chunk1.x();
+                int chunkZ1 = chunk1.z();
+                int chunkX2 = chunk2.x();
+                int chunkZ2 = chunk2.z();
+
+                // Calculate squared distances (more efficient than using square root)
+                int distanceSquared1 = (chunkX1 - x) * (chunkX1 - x) + (chunkZ1 - z) * (chunkZ1 - z);
+                int distanceSquared2 = (chunkX2 - x) * (chunkX2 - x) + (chunkZ2 - z) * (chunkZ2 - z);
+
+                // Compare distances and return accordingly
+                return Integer.compare(distanceSquared1, distanceSquared2);
+            });
+
+            // Create a task to send a chunk to the player every tick
+            blockChangeTasks.put(uuid, Bukkit.getScheduler().runTaskTimer(Blockify.getInstance(), () -> {
+                // Loop through the chunks per tick
+                for (int i = 0; i < stage.getChunksPerTick(); i++) {
+                    // Check if the chunk index is greater than the chunks to send length
+                    if (chunkIndex.get() >= chunksToSend.size()) {
                         blockChangeTasks.get(uuid).cancel();
                         blockChangeTasks.remove(uuid);
                         return;
                     }
                     // Get the chunk from the chunks to send array
-                    BlockifyChunk chunk = chunksToSend[chunkIndex.get()];
+                    BlockifyChunk chunk = chunksToSend.get(chunkIndex.get());
                     chunkIndex.getAndIncrement();
                     // Check if the chunk is loaded, if not, return
                     if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) return;
                     // Send the chunk packet to the player
                     Bukkit.getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
-                }, 0L, 1L));
-            }
+                }
+            }, 0L, 1L));
         }
     }
 

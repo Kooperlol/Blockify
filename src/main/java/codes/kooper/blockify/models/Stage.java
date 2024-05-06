@@ -20,7 +20,7 @@ public class Stage {
     private final World world;
     private BlockifyPosition maxPosition, minPosition;
     private final Set<View> views;
-    private boolean chunkSorting = false;
+    private int chunksPerTick;
     private final Audience audience;
 
     /**
@@ -39,6 +39,7 @@ public class Stage {
         this.minPosition = new BlockifyPosition(Math.min(pos1.getX(), pos2.getX()), Math.min(pos1.getY(), pos2.getY()), Math.min(pos1.getZ(), pos2.getZ()));
         this.views = new HashSet<>();
         this.audience = audience;
+        this.chunksPerTick = 1;
     }
 
 

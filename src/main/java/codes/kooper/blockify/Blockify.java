@@ -8,7 +8,6 @@ import codes.kooper.blockify.protocol.BlockDigAdapter;
 import codes.kooper.blockify.protocol.BlockPlaceAdapter;
 import codes.kooper.blockify.protocol.ChunkLoadAdapter;
 import codes.kooper.blockify.protocol.PlayerInfoAdapter;
-import codes.kooper.blockify.utils.MiningUtils;
 import com.github.retrooper.packetevents.PacketEvents;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import lombok.Getter;
@@ -19,7 +18,6 @@ import org.bukkit.scheduler.BukkitTask;
 public final class Blockify extends JavaPlugin {
     private StageManager stageManager;
     private BlockChangeManager blockChangeManager;
-    private MiningUtils miningUtils;
 
     @Override
     public void onLoad() {
@@ -37,7 +35,6 @@ public final class Blockify extends JavaPlugin {
 
         stageManager = new StageManager();
         blockChangeManager = new BlockChangeManager();
-        miningUtils = new MiningUtils();
 
         getServer().getPluginManager().registerEvents(new StageBoundListener(), this);
 
