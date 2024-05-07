@@ -12,7 +12,7 @@ import java.util.Set;
 @Setter
 @Getter
 public class Audience {
-    private boolean arePlayersHidden = false;
+    private boolean arePlayersHidden;
     private final Set<Player> players;
     private final Map<Player, Float> miningSpeeds;
 
@@ -20,8 +20,7 @@ public class Audience {
      * @param players The players to show the block to
      */
     public Audience(Set<Player> players) {
-        this.players = players;
-        this.miningSpeeds = new HashMap<>();
+        this(players, false);
     }
 
     /**
