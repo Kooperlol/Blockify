@@ -3,23 +3,23 @@ package codes.kooper.blockify.models;
 import codes.kooper.blockify.Blockify;
 import lombok.Getter;
 import lombok.Setter;
+import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 @Setter
 @Getter
 public class Audience {
     private boolean arePlayersHidden = false;
-    private final Set<UUID> players;
-    private final Map<UUID, Float> miningSpeeds;
+    private final Set<Player> players;
+    private final Map<Player, Float> miningSpeeds;
 
     /**
      * @param players The players to show the block to
      */
-    public Audience(Set<UUID> players) {
+    public Audience(Set<Player> players) {
         this.players = players;
         this.miningSpeeds = new HashMap<>();
     }
@@ -28,7 +28,7 @@ public class Audience {
      * @param players The players to show the block to
      * @param arePlayersHidden Whether the players should be hidden
      */
-    public Audience(Set<UUID> players, boolean arePlayersHidden) {
+    public Audience(Set<Player> players, boolean arePlayersHidden) {
         this.players = players;
         this.arePlayersHidden = arePlayersHidden;
         this.miningSpeeds = new HashMap<>();
@@ -38,7 +38,7 @@ public class Audience {
      * @param player The player to add
      * @return The set of players
      */
-    public Set<UUID> addPlayer(UUID player) {
+    public Set<Player> addPlayer(Player player) {
         players.add(player);
         return players;
     }
@@ -47,7 +47,7 @@ public class Audience {
      * @param player The player to remove
      * @return The set of players
      */
-    public Set<UUID> removePlayer(UUID player) {
+    public Set<Player> removePlayer(Player player) {
         players.remove(player);
         return players;
     }
@@ -57,7 +57,7 @@ public class Audience {
      * @param player The player
      * @param speed The speed
      */
-    public void setMiningSpeed(UUID player, float speed) {
+    public void setMiningSpeed(Player player, float speed) {
         if (speed <= 0 || speed == 1) {
             Blockify.getInstance().getLogger().warning("Invalid mining speed for player " + player + ": " + speed);
             return;
@@ -69,7 +69,7 @@ public class Audience {
      * Resets the mining speed for a player
      * @param player The player
      */
-    public void resetMiningSpeed(UUID player) {
+    public void resetMiningSpeed(Player player) {
         miningSpeeds.remove(player);
     }
 
@@ -78,7 +78,7 @@ public class Audience {
      * @param player The player
      * @return The mining speed
      */
-    public float getMiningSpeed(UUID player) {
+    public float getMiningSpeed(Player player) {
         return miningSpeeds.getOrDefault(player, 1f);
     }
 

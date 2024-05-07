@@ -5,11 +5,11 @@ import codes.kooper.blockify.events.CreateStageEvent;
 import codes.kooper.blockify.events.DeleteStageEvent;
 import codes.kooper.blockify.models.Stage;
 import lombok.Getter;
+import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @Getter
 public class StageManager {
@@ -59,7 +59,7 @@ public class StageManager {
      * Get all stages
      * @return List of stages
      */
-    public List<Stage> getStages(UUID player) {
+    public List<Stage> getStages(Player player) {
         return stages.values().stream().filter(stage -> stage.getAudience().getPlayers().contains(player)).toList();
     }
 }
