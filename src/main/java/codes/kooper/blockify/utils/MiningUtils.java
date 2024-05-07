@@ -137,7 +137,7 @@ public class MiningUtils {
             return;
         }
         // If the time difference between the last updated time and the current time is greater than a 1/9th of the mining time, update the block stage
-        if (System.currentTimeMillis() - blockStage.getLastUpdated() > (calculateMiningTimeInMilliseconds(blockData, player) / 9) * view.getStage().getAudience().getMiningSpeed(player.getUniqueId())) {
+        if (System.currentTimeMillis() - blockStage.getLastUpdated() > (calculateMiningTimeInMilliseconds(blockData, player) / 9) * view.getStage().getAudience().getMiningSpeed(player)) {
             // Increment block stage
             blockStage.setStage((byte) (blockStage.getStage() + 1));
             // Update last updated time to current time

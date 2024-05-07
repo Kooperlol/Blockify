@@ -34,7 +34,7 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
             BlockifyPosition position = new BlockifyPosition(wrapper.getBlockPosition().getX(), wrapper.getBlockPosition().getY(), wrapper.getBlockPosition().getZ());
 
             // Get stages the player is in. If the player is not in any stages, return.
-            List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player.getUniqueId());
+            List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player);
             if (stages == null || stages.isEmpty()) {
                 return;
             }
@@ -57,7 +57,7 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
                         }
 
                         // Check if player has custom mining speed, if so, handle custom digging, else handle normal digging
-                        if (view.getStage().getAudience().getMiningSpeed(player.getUniqueId()) != 1) {
+                        if (view.getStage().getAudience().getMiningSpeed(player) != 1) {
                             Blockify.getInstance().getMiningUtils().handleCustomDigging(player, view, actionType, blockData, position);
                         } else {
                             Blockify.getInstance().getMiningUtils().handleNormalDigging(player, view, actionType, blockData, position);

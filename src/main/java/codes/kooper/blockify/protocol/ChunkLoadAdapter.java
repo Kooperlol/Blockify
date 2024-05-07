@@ -25,7 +25,7 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
             int chunkZ = chunkData.getColumn().getZ();
 
             // Get the stages the player is in. If the player is not in any stages, return.
-            List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player.getUniqueId());
+            List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player);
             if (stages == null || stages.isEmpty()) {
                 return;
             }

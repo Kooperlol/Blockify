@@ -25,8 +25,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Getter
 public class BlockChangeManager {
 
-    private final ConcurrentHashMap<UUID, BukkitTask> blockChangeTasks;
-    private final ConcurrentHashMap<UUID, Vector<Long>> chunksBeingSent;
+    private final ConcurrentHashMap<Player, BukkitTask> blockChangeTasks;
+    private final ConcurrentHashMap<Player, Vector<Long>> chunksBeingSent;
     private final ConcurrentHashMap<BlockData, Integer> blockDataToId;
 
     public BlockChangeManager() {
@@ -66,8 +66,7 @@ public class BlockChangeManager {
 
         // If there is only one block change, send it to the player directly
         if (blockChanges.size() == 1) {
-            for (UUID uuid : audience.getPlayers()) {
-                Player onlinePlayer = Bukkit.getPlayer(uuid);
+            for (Player onlinePlayer : audience.getPlayers()) {
                 if (onlinePlayer != null) {
                     for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
                         BlockifyPosition position = entry.getValue().keySet().iterator().next();
@@ -80,8 +79,7 @@ public class BlockChangeManager {
         }
 
         // Send multiple block changes to the players
-        for (UUID uuid : audience.getPlayers()) {
-            Player onlinePlayer = Bukkit.getPlayer(uuid);
+        for (Player onlinePlayer : audience.getPlayers()) {
             if (onlinePlayer == null) continue;
             Location playerLocation = onlinePlayer.getLocation();
 
@@ -107,13 +105,13 @@ public class BlockChangeManager {
             });
 
             // Create a task to send a chunk to the player every tick
-            blockChangeTasks.put(uuid, Bukkit.getScheduler().runTaskTimer(Blockify.getInstance(), () -> {
+            blockChangeTasks.put(onlinePlayer, Bukkit.getScheduler().runTaskTimer(Blockify.getInstance(), () -> {
                 // Loop through chunks per tick
                 for (int i = 0; i < stage.getChunksPerTick(); i++) {
                     // If the chunk index is greater than the chunks to send length
                     if (chunkIndex.get() >= chunksToSend.size()) {
                         // Safely cancel the task and remove it from the map
-                        blockChangeTasks.computeIfPresent(uuid, (key, task) -> {
+                        blockChangeTasks.computeIfPresent(onlinePlayer, (key, task) -> {
                             task.cancel();
                             return null; // Remove the task
                         });
@@ -147,9 +145,9 @@ public class BlockChangeManager {
         User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
 
         // Initialize the chunksBeingSent map for this player if not present
-        chunksBeingSent.computeIfAbsent(player.getUniqueId(), k -> new Vector<>());
+        chunksBeingSent.computeIfAbsent(player, k -> new Vector<>());
 
-        Vector<Long> playerChunksBeingSent = chunksBeingSent.get(player.getUniqueId());
+        Vector<Long> playerChunksBeingSent = chunksBeingSent.get(player);
 
         // Ensure the chunk isn't already being sent
         if (playerChunksBeingSent.contains(chunk.getChunkKey())) {

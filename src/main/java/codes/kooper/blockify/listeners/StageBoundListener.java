@@ -14,7 +14,6 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.List;
-import java.util.UUID;
 
 public class StageBoundListener implements Listener {
 
@@ -31,7 +30,7 @@ public class StageBoundListener implements Listener {
     @EventHandler
     public void onPlayerMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
-        List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player.getUniqueId());
+        List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player);
         for (Stage stage : stages) {
             if (stage.isLocationWithin(event.getTo())) {
                 new PlayerEnterStageEvent(stage, player).callEvent();
@@ -53,7 +52,7 @@ public class StageBoundListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player.getUniqueId());
+        List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player);
         for (Stage stage : stages) {
             if (stage.isLocationWithin(player.getLocation())) {
                 new PlayerEnterStageEvent(stage, player).callEvent();
@@ -72,7 +71,7 @@ public class StageBoundListener implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
-        List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player.getUniqueId());
+        List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player);
         for (Stage stage : stages) {
             new PlayerExitStageEvent(stage, player).callEvent();
         }
@@ -119,8 +118,7 @@ public class StageBoundListener implements Listener {
     @EventHandler
     public void onPlayerEnterStage(PlayerEnterStageEvent event) {
         if (!event.getStage().getAudience().isArePlayersHidden()) return;
-        for (UUID uuid : event.getStage().getAudience().getPlayers()) {
-            Player player = Blockify.getInstance().getServer().getPlayer(uuid);
+        for (Player player : event.getStage().getAudience().getPlayers()) {
             if (player == null) continue;
             player.hidePlayer(Blockify.getInstance(), event.getPlayer());
             if (!event.getStage().isLocationWithin(player.getLocation())) continue;
@@ -139,8 +137,7 @@ public class StageBoundListener implements Listener {
     @EventHandler
     public void onPlayerExitStage(PlayerExitStageEvent event) {
         if (!event.getStage().getAudience().isArePlayersHidden()) return;
-        for (UUID uuid : event.getStage().getAudience().getPlayers()) {
-            Player player = Blockify.getInstance().getServer().getPlayer(uuid);
+        for (Player player : event.getStage().getAudience().getPlayers()) {
             if (player == null) continue;
             player.showPlayer(Blockify.getInstance(), event.getPlayer());
         }
