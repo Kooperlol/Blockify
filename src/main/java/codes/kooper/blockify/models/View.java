@@ -233,12 +233,10 @@ public class View {
 
     /**
      * Changes the pattern of the view.
-     * Call this method asynchronously.
      *
      * @param pattern The new pattern.
      */
     public void changePattern(Pattern pattern) {
         this.pattern = pattern;
-        resetViewBlocks();
     }
 }
