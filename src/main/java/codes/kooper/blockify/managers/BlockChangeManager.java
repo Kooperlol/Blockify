@@ -44,18 +44,17 @@ public class BlockChangeManager {
      */
     public void sendViews(Stage stage, Player player) {
         for (View view : stage.getViews()) {
-            sendView(stage, player, view);
+            sendView(player, view);
         }
     }
 
     /**
      * Sends a view to the player.
      *
-     * @param stage  the stage
      * @param player the player
      * @param view   the view
      */
-    public void sendView(Stage stage, Player player, View view) {
+    public void sendView(Player player, View view) {
         Audience audience = new Audience(new HashSet<>(Collections.singletonList(player)));
         ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks = new ConcurrentHashMap<>();
         for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : view.getBlocks().entrySet()) {
@@ -64,7 +63,7 @@ public class BlockChangeManager {
             }
             blocks.get(entry.getKey()).putAll(entry.getValue());
         }
-        sendBlockChanges(stage, audience, blocks);
+        sendBlockChanges(view.getStage(), audience, blocks);
     }
 
     /**
