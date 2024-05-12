@@ -69,11 +69,10 @@ public class BlockChangeManager {
     /**
      * Hides a view from the player.
      *
-     * @param stage  the stage
      * @param player the player
      * @param view   the view
      */
-    public void hideView(Stage stage, Player player, View view) {
+    public void hideView(Player player, View view) {
         Audience audience = new Audience(new HashSet<>(Collections.singletonList(player)));
         ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks = new ConcurrentHashMap<>();
         for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : view.getBlocks().entrySet()) {
@@ -81,10 +80,10 @@ public class BlockChangeManager {
                 blocks.put(entry.getKey(), new ConcurrentHashMap<>());
             }
             for (Map.Entry<BlockifyPosition, BlockData> blockEntry : entry.getValue().entrySet()) {
-                blocks.get(entry.getKey()).put(blockEntry.getKey(), stage.getWorld().getBlockData(blockEntry.getKey().getX(), blockEntry.getKey().getY(), blockEntry.getKey().getZ()));
+                blocks.get(entry.getKey()).put(blockEntry.getKey(), view.getStage().getWorld().getBlockData(blockEntry.getKey().getX(), blockEntry.getKey().getY(), blockEntry.getKey().getZ()));
             }
         }
-        sendBlockChanges(stage, audience, blocks);
+        sendBlockChanges(view.getStage(), audience, blocks);
     }
 
     /**
@@ -95,7 +94,7 @@ public class BlockChangeManager {
      */
     public void hideViews(Stage stage, Player player) {
         for (View view : stage.getViews()) {
-            hideView(stage, player, view);
+            hideView(player, view);
         }
     }
 
