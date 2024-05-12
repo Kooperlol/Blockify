@@ -26,7 +26,7 @@ public final class Blockify extends JavaPlugin {
         PacketEvents.setAPI(SpigotPacketEventsBuilder.build(this));
         PacketEvents.getAPI().getSettings().reEncodeByDefault(false)
                 .checkForUpdates(true)
-                .bStats(true);
+                .bStats(false);
         PacketEvents.getAPI().load();
     }
 

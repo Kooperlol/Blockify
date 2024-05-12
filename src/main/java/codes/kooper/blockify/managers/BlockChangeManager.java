@@ -4,6 +4,7 @@ import codes.kooper.blockify.Blockify;
 import codes.kooper.blockify.events.OnBlockChangeSendEvent;
 import codes.kooper.blockify.models.Audience;
 import codes.kooper.blockify.models.Stage;
+import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyChunk;
 import codes.kooper.blockify.types.BlockifyPosition;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -33,6 +34,69 @@ public class BlockChangeManager {
         this.blockChangeTasks = new ConcurrentHashMap<>();
         this.chunksBeingSent = new ConcurrentHashMap<>();
         this.blockDataToId = new ConcurrentHashMap<>();
+    }
+
+    /**
+     * Sends views to the player.
+     *
+     * @param stage  the stage
+     * @param player the player
+     */
+    public void sendViews(Stage stage, Player player) {
+        for (View view : stage.getViews()) {
+            sendView(player, view);
+        }
+    }
+
+    /**
+     * Sends a view to the player.
+     *
+     * @param player the player
+     * @param view   the view
+     */
+    public void sendView(Player player, View view) {
+        Audience audience = new Audience(new HashSet<>(Collections.singletonList(player)));
+        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks = new ConcurrentHashMap<>();
+        for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : view.getBlocks().entrySet()) {
+            if (!blocks.containsKey(entry.getKey())) {
+                blocks.put(entry.getKey(), new ConcurrentHashMap<>());
+            }
+            blocks.get(entry.getKey()).putAll(entry.getValue());
+        }
+        sendBlockChanges(view.getStage(), audience, blocks);
+    }
+
+    /**
+     * Hides a view from the player.
+     *
+     * @param stage  the stage
+     * @param player the player
+     * @param view   the view
+     */
+    public void hideView(Stage stage, Player player, View view) {
+        Audience audience = new Audience(new HashSet<>(Collections.singletonList(player)));
+        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks = new ConcurrentHashMap<>();
+        for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : view.getBlocks().entrySet()) {
+            if (!blocks.containsKey(entry.getKey())) {
+                blocks.put(entry.getKey(), new ConcurrentHashMap<>());
+            }
+            for (Map.Entry<BlockifyPosition, BlockData> blockEntry : entry.getValue().entrySet()) {
+                blocks.get(entry.getKey()).put(blockEntry.getKey(), stage.getWorld().getBlockData(blockEntry.getKey().getX(), blockEntry.getKey().getY(), blockEntry.getKey().getZ()));
+            }
+        }
+        sendBlockChanges(stage, audience, blocks);
+    }
+
+    /**
+     * Hides views from the player.
+     *
+     * @param stage  the stage
+     * @param player the player
+     */
+    public void hideViews(Stage stage, Player player) {
+        for (View view : stage.getViews()) {
+            hideView(stage, player, view);
+        }
     }
 
     /**

@@ -84,15 +84,8 @@ public class MiningUtils {
      * @param position   BlockifyPosition
      */
     public void handleNormalDigging(Player player, View view, DiggingAction actionType, BlockData blockData, BlockifyPosition position) {
-        // Check if player can instantly break block, if so, set actionType to FINISHED_DIGGING
-        if (actionType == DiggingAction.START_DIGGING) {
-            if (canInstantBreak(player, blockData)) {
-                actionType = DiggingAction.FINISHED_DIGGING;
-            }
-        }
-
         // Block break functionality
-        if (actionType == DiggingAction.FINISHED_DIGGING) {
+        if (actionType == DiggingAction.FINISHED_DIGGING || canInstantBreak(player, blockData)) {
             Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> {
                 // Call BlockifyBreakEvent
                 BlockifyBreakEvent ghostBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
