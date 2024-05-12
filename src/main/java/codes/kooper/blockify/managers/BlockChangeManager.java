@@ -38,6 +38,7 @@ public class BlockChangeManager {
 
     /**
      * Sends views to the player.
+     * Call Asynchronously
      *
      * @param stage  the stage
      * @param player the player
@@ -50,6 +51,7 @@ public class BlockChangeManager {
 
     /**
      * Sends a view to the player.
+     * Call Asynchronously
      *
      * @param player the player
      * @param view   the view
@@ -68,6 +70,7 @@ public class BlockChangeManager {
 
     /**
      * Hides a view from the player.
+     * Call Asynchronously
      *
      * @param player the player
      * @param view   the view
@@ -88,6 +91,7 @@ public class BlockChangeManager {
 
     /**
      * Hides views from the player.
+     * Call Asynchronously
      *
      * @param stage  the stage
      * @param player the player
@@ -116,6 +120,7 @@ public class BlockChangeManager {
 
     /**
      * Sends block changes to the audience.
+     * Call Asynchronously
      *
      * @param stage        the stage
      * @param audience     the audience
@@ -197,6 +202,7 @@ public class BlockChangeManager {
 
     /**
      * Sends a chunk packet to the player.
+     * Call Asynchronously
      *
      * @param stage         the stage
      * @param player        the player
@@ -253,7 +259,7 @@ public class BlockChangeManager {
         // Remove the chunk from the chunks being sent list
         playerChunksBeingSent.remove(chunk.getChunkKey());
         if (playerChunksBeingSent.isEmpty()) {
-            chunksBeingSent.remove(player.getUniqueId());
+            chunksBeingSent.remove(player);
         }
     }
 
