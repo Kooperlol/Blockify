@@ -7,6 +7,7 @@ import codes.kooper.blockify.models.Stage;
 import lombok.Getter;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,12 @@ public class StageManager {
      * @return List of stages
      */
     public List<Stage> getStages(Player player) {
-        return stages.values().stream().filter(stage -> stage.getAudience().getPlayers().contains(player)).toList();
+        List<Stage> stages = new ArrayList<>();
+        for (Stage stage : this.stages.values()) {
+            if (stage.getAudience().getPlayers().contains(player)) {
+                stages.add(stage);
+            }
+        }
+        return stages;
     }
 }

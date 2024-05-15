@@ -169,6 +169,15 @@ public class BlockChangeManager {
 
             // Create a task to send a chunk to the player every tick
             blockChangeTasks.put(onlinePlayer, Bukkit.getScheduler().runTaskTimer(Blockify.getInstance(), () -> {
+                // Check if player is online, if not, cancel the task
+                if (!onlinePlayer.isOnline()) {
+                    blockChangeTasks.computeIfPresent(onlinePlayer, (key, task) -> {
+                        task.cancel();
+                        return null;
+                    });
+                    return;
+                }
+
                 // Loop through chunks per tick
                 for (int i = 0; i < stage.getChunksPerTick(); i++) {
                     // If the chunk index is greater than the chunks to send length
