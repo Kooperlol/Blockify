@@ -41,11 +41,6 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
                     // If the chunk is not in the world, return.
                     if (!stage.getWorld().equals(player.getWorld())) return;
 
-                    // If the chunk is being sent to the player, return.
-                    if (Blockify.getInstance().getBlockChangeManager().getChunksBeingSent().get(player.getUniqueId()) != null && Blockify.getInstance().getBlockChangeManager().getChunksBeingSent().get(player.getUniqueId()).contains(blockifyChunk.getChunkKey())) {
-                        return;
-                    }
-
                     Blockify.getInstance().getBlockChangeManager().sendChunkPacket(stage, player, blockifyChunk, view.getBlocks());
                 }
             }

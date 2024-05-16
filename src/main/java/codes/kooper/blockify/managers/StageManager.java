@@ -14,7 +14,11 @@ import java.util.Map;
 
 @Getter
 public class StageManager {
-    private final Map<String, Stage> stages = new HashMap<>();
+    private final Map<String, Stage> stages;
+
+    public StageManager() {
+        this.stages = new HashMap<>();
+    }
 
     /**
      * Create a new stage

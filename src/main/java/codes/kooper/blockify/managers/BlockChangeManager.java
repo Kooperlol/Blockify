@@ -27,12 +27,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class BlockChangeManager {
 
     private final ConcurrentHashMap<Player, BukkitTask> blockChangeTasks;
-    private final ConcurrentHashMap<Player, Vector<Long>> chunksBeingSent;
     private final ConcurrentHashMap<BlockData, Integer> blockDataToId;
 
     public BlockChangeManager() {
         this.blockChangeTasks = new ConcurrentHashMap<>();
-        this.chunksBeingSent = new ConcurrentHashMap<>();
+        //this.chunksBeingSent = new ConcurrentHashMap<>();
         this.blockDataToId = new ConcurrentHashMap<>();
     }
 
@@ -133,7 +132,11 @@ public class BlockChangeManager {
         Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new OnBlockChangeSendEvent(stage, blockChanges).callEvent());
 
         // If there is only one block change, send it to the player directly
-        if (blockChanges.size() == 1) {
+        int blockCount = 0;
+        for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
+            blockCount += entry.getValue().size();
+        }
+        if (blockCount == 1) {
             for (Player onlinePlayer : audience.getPlayers()) {
                 if (onlinePlayer != null) {
                     for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
@@ -222,18 +225,6 @@ public class BlockChangeManager {
         // Get the user from PacketEvents API
         User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
 
-        // Initialize the chunksBeingSent map for this player if not present
-        chunksBeingSent.computeIfAbsent(player, k -> new Vector<>());
-
-        Vector<Long> playerChunksBeingSent = chunksBeingSent.get(player);
-
-        // Ensure the chunk isn't already being sent
-        if (playerChunksBeingSent.contains(chunk.getChunkKey())) {
-            return;
-        }
-        // Add this chunk to the chunks being sent list
-        playerChunksBeingSent.add(chunk.getChunkKey());
-
         // Loop through the chunks y positions
         for (int chunkY = stage.getMinPosition().getY() >> 4; chunkY <= stage.getMaxPosition().getY() >> 4; chunkY++) {
             // Create a list of encoded blocks for PacketEvents wrapper
@@ -263,12 +254,6 @@ public class BlockChangeManager {
             WrapperPlayServerMultiBlockChange.EncodedBlock[] encodedBlocksArray = encodedBlocks.toArray(new WrapperPlayServerMultiBlockChange.EncodedBlock[0]);
             WrapperPlayServerMultiBlockChange wrapper = new WrapperPlayServerMultiBlockChange(new Vector3i(chunk.x(), chunkY, chunk.z()), true, encodedBlocksArray);
             Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> user.sendPacket(wrapper));
-        }
-
-        // Remove the chunk from the chunks being sent list
-        playerChunksBeingSent.remove(chunk.getChunkKey());
-        if (playerChunksBeingSent.isEmpty()) {
-            chunksBeingSent.remove(player);
         }
     }
 
