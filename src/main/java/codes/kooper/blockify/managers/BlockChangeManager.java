@@ -138,7 +138,6 @@ public class BlockChangeManager {
             blockCount += entry.getValue().size();
         }
         if (blockCount == 1) {
-            Blockify.getInstance().getLogger().info("Sending single block change");
             for (Player onlinePlayer : audience.getPlayers()) {
                 if (onlinePlayer != null) {
                     for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
