@@ -5,6 +5,7 @@ import codes.kooper.blockify.events.OnBlockChangeSendEvent;
 import codes.kooper.blockify.models.Audience;
 import codes.kooper.blockify.models.Stage;
 import codes.kooper.blockify.models.View;
+import codes.kooper.blockify.runnables.BlockSendRunnable;
 import codes.kooper.blockify.types.BlockifyChunk;
 import codes.kooper.blockify.types.BlockifyPosition;
 import com.github.retrooper.packetevents.PacketEvents;
@@ -17,7 +18,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,14 +26,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
 public class BlockChangeManager {
-
-    private final ConcurrentHashMap<Player, BukkitTask> blockChangeTasks;
+    private final BlockSendRunnable blockSendTask;
+    private final ConcurrentHashMap<Player, Queue<BukkitRunnable>> blockChangeTasks;
     private final ConcurrentHashMap<BlockData, Integer> blockDataToId;
 
     public BlockChangeManager() {
         this.blockChangeTasks = new ConcurrentHashMap<>();
-        //this.chunksBeingSent = new ConcurrentHashMap<>();
         this.blockDataToId = new ConcurrentHashMap<>();
+        blockSendTask = new BlockSendRunnable();
     }
 
     /**
@@ -104,10 +105,10 @@ public class BlockChangeManager {
     /**
      * Sends a block change to the audience.
      *
-     * @param stage        the stage
-     * @param audience     the audience
-     * @param position     the position
-     * @param blockData    the block data
+     * @param stage     the stage
+     * @param audience  the audience
+     * @param position  the position
+     * @param blockData the block data
      */
     public void sendBlockChange(Stage stage, Audience audience, BlockifyPosition position, BlockData blockData) {
         ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = new ConcurrentHashMap<>();
@@ -137,6 +138,7 @@ public class BlockChangeManager {
             blockCount += entry.getValue().size();
         }
         if (blockCount == 1) {
+            Blockify.getInstance().getLogger().info("Sending single block change");
             for (Player onlinePlayer : audience.getPlayers()) {
                 if (onlinePlayer != null) {
                     for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
@@ -175,40 +177,36 @@ public class BlockChangeManager {
                 return Integer.compare(distanceSquared1, distanceSquared2);
             });
 
-            // Create a task to send a chunk to the player every tick
-            blockChangeTasks.put(onlinePlayer, Bukkit.getScheduler().runTaskTimer(Blockify.getInstance(), () -> {
-                // Check if player is online, if not, cancel the task
-                if (!onlinePlayer.isOnline()) {
-                    blockChangeTasks.computeIfPresent(onlinePlayer, (key, task) -> {
-                        task.cancel();
-                        return null;
-                    });
-                    return;
-                }
+            // Creates a Queue if not present
+            blockChangeTasks.computeIfAbsent(onlinePlayer, key -> new LinkedList<>());
 
-                // Loop through chunks per tick
-                for (int i = 0; i < stage.getChunksPerTick(); i++) {
-                    // If the chunk index is greater than the chunks to send length
-                    if (chunkIndex.get() >= chunksToSend.size()) {
-                        // Safely cancel the task and remove it from the map
-                        blockChangeTasks.computeIfPresent(onlinePlayer, (key, task) -> {
-                            task.cancel();
-                            return null; // Remove the task
-                        });
+            // Create a task to send a chunk to the player every tick
+            blockChangeTasks.get(onlinePlayer).add(new BukkitRunnable() {
+                @Override
+                public void run() {
+                    if (!onlinePlayer.isOnline()) {
                         return;
                     }
 
-                    // Get the chunk from the chunks to send array
-                    BlockifyChunk chunk = chunksToSend.get(chunkIndex.get());
-                    chunkIndex.getAndIncrement();
+                    // Loop through chunks per tick
+                    for (int i = 0; i < stage.getChunksPerTick(); i++) {
+                        // If the chunk index is greater than the chunks to send length
+                        if (chunkIndex.get() >= chunksToSend.size()) {
+                            return;
+                        }
 
-                    // Check if the chunk is loaded; if not, return
-                    if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) return;
+                        // Get the chunk from the chunks to send array
+                        BlockifyChunk chunk = chunksToSend.get(chunkIndex.get());
+                        chunkIndex.getAndIncrement();
 
-                    // Send the chunk packet to the player
-                    Bukkit.getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
+                        // Check if the chunk is loaded; if not, return
+                        if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) return;
+
+                        // Send the chunk packet to the player
+                        Bukkit.getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
+                    }
                 }
-            }, 0L, 1L));
+            });
         }
     }
 
@@ -216,10 +214,10 @@ public class BlockChangeManager {
      * Sends a chunk packet to the player.
      * Call Asynchronously
      *
-     * @param stage         the stage
-     * @param player        the player
-     * @param chunk         the chunk
-     * @param blockChanges  the block changes
+     * @param stage        the stage
+     * @param player       the player
+     * @param chunk        the chunk
+     * @param blockChanges the block changes
      */
     public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
         // Get the user from PacketEvents API

@@ -13,7 +13,6 @@ import com.github.retrooper.packetevents.PacketEvents;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitTask;
 
 @Getter
 public final class Blockify extends JavaPlugin {
@@ -48,8 +47,7 @@ public final class Blockify extends JavaPlugin {
     @Override
     public void onDisable() {
         getLogger().info("Blockify has been disabled!");
-        blockChangeManager.getBlockChangeTasks().values().forEach(BukkitTask::cancel);
-        PacketEvents.getAPI().terminate();
+        blockChangeManager.getBlockSendTask().cancel();
     }
 
     public static Blockify getInstance() {
