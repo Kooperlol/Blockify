@@ -62,10 +62,14 @@ public class MiningUtils {
             return;
         }
 
-        // Check if player can instantly break block (CREATIVE)
-        if (actionType == DiggingAction.START_DIGGING && player.getGameMode() == GameMode.CREATIVE) {
+        // Check if player can instantly break block (CREATIVE) or if mining speed is 0
+        if (actionType == DiggingAction.START_DIGGING && (player.getGameMode() == GameMode.CREATIVE || view.getStage().getAudience().getMiningSpeed(player) == 0)) {
             actionType = DiggingAction.FINISHED_DIGGING;
             blockStages.get(position).setStage((byte) 9);
+            if (view.getStage().getAudience().getMiningSpeed(player) == 0) {
+                WrapperPlayServerBlockBreakAnimation wrapperPlayServerBlockBreakAnimation = new WrapperPlayServerBlockBreakAnimation(new Random().nextInt(999999999) + 1000, new Vector3i(position.getX(), position.getY(), position.getZ()), (byte) 9);
+                PacketEvents.getAPI().getPlayerManager().sendPacket(player, wrapperPlayServerBlockBreakAnimation);
+            }
         }
 
         // Block break functionality
@@ -143,6 +147,7 @@ public class MiningUtils {
             }
         }
         // Send block break animation packet
+        if (blockStages.get(position) == null || blockStages.get(position).getStage() >= 9) return;
         WrapperPlayServerBlockBreakAnimation wrapperPlayServerBlockBreakAnimation = new WrapperPlayServerBlockBreakAnimation(new Random().nextInt(999999999) + 1000, new Vector3i(position.getX(), position.getY(), position.getZ()), blockStages.get(position).getStage());
         PacketEvents.getAPI().getPlayerManager().sendPacket(player, wrapperPlayServerBlockBreakAnimation);
     }

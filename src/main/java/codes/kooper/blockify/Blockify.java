@@ -47,7 +47,6 @@ public final class Blockify extends JavaPlugin {
     @Override
     public void onDisable() {
         getLogger().info("Blockify has been disabled!");
-        blockChangeManager.getBlockSendTask().cancel();
     }
 
     public static Blockify getInstance() {
