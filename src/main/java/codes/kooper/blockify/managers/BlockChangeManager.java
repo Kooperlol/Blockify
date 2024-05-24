@@ -25,13 +25,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
 public class BlockChangeManager {
-
     private final ConcurrentHashMap<Player, BukkitTask> blockChangeTasks;
     private final ConcurrentHashMap<BlockData, Integer> blockDataToId;
 
     public BlockChangeManager() {
         this.blockChangeTasks = new ConcurrentHashMap<>();
-        //this.chunksBeingSent = new ConcurrentHashMap<>();
         this.blockDataToId = new ConcurrentHashMap<>();
     }
 

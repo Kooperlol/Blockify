@@ -71,7 +71,6 @@ public class Stage {
      * @param blocks Blocks to refresh to the audience.
      */
     public void refreshBlocksToAudience(Set<BlockifyPosition> blocks) {
-        Blockify.getInstance().getLogger().info("Refresh with size " + blocks.size());
         ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = new ConcurrentHashMap<>();
         for (View view : views) {
             for (BlockifyPosition position : blocks) {

@@ -57,7 +57,7 @@ public class Audience {
      * @param speed The speed
      */
     public void setMiningSpeed(Player player, float speed) {
-        if (speed <= 0 || speed == 1) {
+        if (speed < 0 || speed == 1) {
             Blockify.getInstance().getLogger().warning("Invalid mining speed for player " + player + ": " + speed);
             return;
         }
