@@ -137,6 +137,7 @@ public class BlockChangeManager {
         if (blockCount == 1) {
             for (Player onlinePlayer : audience.getPlayers()) {
                 if (onlinePlayer != null) {
+                    if (onlinePlayer.getWorld() != stage.getWorld()) continue;
                     for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
                         BlockifyPosition position = entry.getValue().keySet().iterator().next();
                         BlockData blockData = entry.getValue().values().iterator().next();
@@ -151,6 +152,7 @@ public class BlockChangeManager {
         for (Player onlinePlayer : audience.getPlayers()) {
             if (onlinePlayer == null) continue;
             Location playerLocation = onlinePlayer.getLocation();
+            if (playerLocation.getWorld() != stage.getWorld()) continue;
 
             // The chunk index is used to keep track of the current chunk being sent
             AtomicInteger chunkIndex = new AtomicInteger(0);
