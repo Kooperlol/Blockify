@@ -9,6 +9,7 @@ import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.protocol.player.DiggingAction;
 import com.github.retrooper.packetevents.util.Vector3i;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockBreakAnimation;
+import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -19,11 +20,13 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
-import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
+@Getter
 public class MiningUtils {
-    private final ConcurrentHashMap<BlockifyPosition, BlockifyBlockStage> blockStages;
+    private final ConcurrentHashMap<View, ConcurrentHashMap<BlockifyPosition, BlockifyBlockStage>> blockStages;
 
     public MiningUtils() {
         this.blockStages = new ConcurrentHashMap<>();
@@ -43,21 +46,22 @@ public class MiningUtils {
         Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_DIGGING, Integer.MAX_VALUE, -1, true, false, false)));
 
         // Update block stage periodically
-        if (!blockStages.containsKey(position)) {
-            blockStages.put(position, new BlockifyBlockStage((byte) 0, System.currentTimeMillis()));
+        if (!blockStages.containsKey(view) || blockStages.get(view) == null || blockStages.get(view).get(position) == null) {
+            blockStages.putIfAbsent(view, new ConcurrentHashMap<>());
+            blockStages.get(view).put(position, new BlockifyBlockStage(ThreadLocalRandom.current().nextInt(999999999) + 1000, (byte) 0, System.currentTimeMillis()));
         }
-        if (blockStages.get(position).getTask() == 0) {
-            blockStages.get(position).setTask(Bukkit.getScheduler().runTaskTimerAsynchronously(Blockify.getInstance(), () -> {
-                if (player.isOnline() && blockStages.containsKey(position)) {
+        if (blockStages.get(view).get(position).getTask() == 0) {
+            blockStages.get(view).get(position).setTask(Bukkit.getScheduler().runTaskTimerAsynchronously(Blockify.getInstance(), () -> {
+                if (player.isOnline() && blockStages.get(view).containsKey(position)) {
                     updateBlockStage(player, position, blockData, view);
                 }
             }, 0, 1).getTaskId());
         }
 
         // Check if cancelled digging
-        if (actionType == DiggingAction.CANCELLED_DIGGING && blockStages.containsKey(position)) {
-            Bukkit.getScheduler().cancelTask(blockStages.get(position).getTask());
-            blockStages.get(position).setTask(0);
+        if (actionType == DiggingAction.CANCELLED_DIGGING && blockStages.get(view).containsKey(position)) {
+            Bukkit.getScheduler().cancelTask(blockStages.get(view).get(position).getTask());
+            blockStages.get(view).get(position).setTask(0);
             Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> player.removePotionEffect(PotionEffectType.SLOW_DIGGING));
             return;
         }
@@ -65,15 +69,17 @@ public class MiningUtils {
         // Check if player can instantly break block (CREATIVE) or if mining speed is 0
         if (actionType == DiggingAction.START_DIGGING && (player.getGameMode() == GameMode.CREATIVE || view.getStage().getAudience().getMiningSpeed(player) == 0)) {
             actionType = DiggingAction.FINISHED_DIGGING;
-            blockStages.get(position).setStage((byte) 9);
+            blockStages.get(view).get(position).setStage((byte) 9);
             if (view.getStage().getAudience().getMiningSpeed(player) == 0) {
-                WrapperPlayServerBlockBreakAnimation wrapperPlayServerBlockBreakAnimation = new WrapperPlayServerBlockBreakAnimation(new Random().nextInt(999999999) + 1000, new Vector3i(position.getX(), position.getY(), position.getZ()), (byte) 9);
-                PacketEvents.getAPI().getPlayerManager().sendPacket(player, wrapperPlayServerBlockBreakAnimation);
+                for (Player member : view.getStage().getAudience().getPlayers()) {
+                    WrapperPlayServerBlockBreakAnimation wrapperPlayServerBlockBreakAnimation = new WrapperPlayServerBlockBreakAnimation(blockStages.get(view).get(position).getEntityId(), new Vector3i(position.getX(), position.getY(), position.getZ()), (byte) 9);
+                    PacketEvents.getAPI().getPlayerManager().getUser(member).writePacket(wrapperPlayServerBlockBreakAnimation);
+                }
             }
         }
 
         // Block break functionality
-        if (actionType == DiggingAction.FINISHED_DIGGING && blockStages.get(position).getStage() >= 9) {
+        if (actionType == DiggingAction.FINISHED_DIGGING && blockStages.get(view).get(position).getStage() >= 9) {
             breakCustomBlock(player, position, blockData, view);
         }
     }
@@ -126,11 +132,14 @@ public class MiningUtils {
      */
     public void updateBlockStage(Player player, BlockifyPosition position, BlockData blockData, View view) {
         // Check if block stage exists, if not, return
-        if (!blockStages.containsKey(position) || blockStages.get(position) == null) return;
+        if (!blockStages.containsKey(view) || blockStages.get(view) == null || !blockStages.get(view).containsKey(position)) return;
         // Get block stage and check if it is null, if so, remove it from the map and return
-        BlockifyBlockStage blockStage = blockStages.get(position);
+        BlockifyBlockStage blockStage = blockStages.get(view).get(position);
         if (blockStage == null) {
-            blockStages.remove(position);
+            blockStages.get(view).remove(position);
+            if (blockStages.get(view).isEmpty()) {
+                blockStages.remove(view);
+            }
             return;
         }
         // If the time difference between the last updated time and the current time is greater than a 1/9th of the mining time, update the block stage
@@ -147,9 +156,11 @@ public class MiningUtils {
             }
         }
         // Send block break animation packet
-        if (blockStages.get(position) == null || blockStages.get(position).getStage() >= 9) return;
-        WrapperPlayServerBlockBreakAnimation wrapperPlayServerBlockBreakAnimation = new WrapperPlayServerBlockBreakAnimation(new Random().nextInt(999999999) + 1000, new Vector3i(position.getX(), position.getY(), position.getZ()), blockStages.get(position).getStage());
-        PacketEvents.getAPI().getPlayerManager().sendPacket(player, wrapperPlayServerBlockBreakAnimation);
+        if (!blockStages.containsKey(view) || blockStages.get(view) == null || !blockStages.get(view).containsKey(position) || blockStages.get(view).get(position).getStage() >= 9) return;
+        for (Player member : view.getStage().getAudience().getPlayers()) {
+            WrapperPlayServerBlockBreakAnimation wrapperPlayServerBlockBreakAnimation = new WrapperPlayServerBlockBreakAnimation(blockStages.get(view).get(position).getEntityId(), new Vector3i(position.getX(), position.getY(), position.getZ()), blockStages.get(view).get(position).getStage());
+            PacketEvents.getAPI().getPlayerManager().sendPacket(member, wrapperPlayServerBlockBreakAnimation);
+        }
     }
 
     /**
@@ -167,10 +178,7 @@ public class MiningUtils {
             BlockifyBreakEvent ghostBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
             ghostBreakEvent.callEvent();
             // If block stage exists, cancel the task and remove it from the map
-            if (blockStages.containsKey(position)) {
-                Bukkit.getScheduler().cancelTask(blockStages.get(position).getTask());
-                blockStages.remove(position);
-            }
+            resetViewBlockAnimation(view, Set.of(position));
             // Remove mining fatigue effect
             player.removePotionEffect(PotionEffectType.SLOW_DIGGING);
             // If block is not cancelled, break the block, otherwise, revert the block
@@ -181,6 +189,30 @@ public class MiningUtils {
                 player.sendBlockChange(position.toLocation(player.getWorld()), blockData);
             }
         });
+    }
+
+    /**
+     * Reset view's block animation at the specified positions
+     *
+     * @param view      View of the player
+     * @param positions Set of BlockifyPosition
+     */
+    public void resetViewBlockAnimation(View view, Set<BlockifyPosition> positions) {
+        if (!blockStages.containsKey(view) || blockStages.get(view) == null) return;
+        for (BlockifyPosition position : positions) {
+            if (blockStages.get(view).containsKey(position)) {
+                Bukkit.getScheduler().cancelTask(blockStages.get(view).get(position).getTask());
+                int id = blockStages.get(view).remove(position).getEntityId();
+                for (Player member : view.getStage().getAudience().getPlayers()) {
+                    WrapperPlayServerBlockBreakAnimation wrapperPlayServerBlockBreakAnimation = new WrapperPlayServerBlockBreakAnimation(id, new Vector3i(position.getX(), position.getY(), position.getZ()), (byte) -1);
+                    PacketEvents.getAPI().getPlayerManager().getUser(member).writePacket(wrapperPlayServerBlockBreakAnimation);
+                }
+                if (blockStages.get(view).isEmpty()) {
+                    blockStages.remove(view);
+                    return;
+                }
+            }
+        }
     }
 
     /**

@@ -6,6 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class BlockifyBlockStage {
+    private final int entityId;
     private byte stage;
     private long lastUpdated;
     private int task = 0;
@@ -15,7 +16,8 @@ public class BlockifyBlockStage {
      * @param stage The stage of the block
      * @param lastUpdated The last time the block was updated
      */
-    public BlockifyBlockStage(byte stage, long lastUpdated) {
+    public BlockifyBlockStage(int entityId, byte stage, long lastUpdated) {
+        this.entityId = entityId;
         this.stage = stage;
         this.lastUpdated = lastUpdated;
     }
