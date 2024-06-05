@@ -33,9 +33,17 @@ public class StageBoundListener implements Listener {
         List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player);
         for (Stage stage : stages) {
             if (stage.isLocationWithin(event.getTo())) {
-                new PlayerEnterStageEvent(stage, player).callEvent();
+                PlayerEnterStageEvent e = new PlayerEnterStageEvent(stage, player);
+                e.callEvent();
+                if (e.isCancelled()) {
+                    event.setCancelled(true);
+                }
             } else if (stage.isLocationWithin(event.getFrom())) {
-                new PlayerExitStageEvent(stage, player).callEvent();
+                PlayerExitStageEvent e = new PlayerExitStageEvent(stage, player);
+                e.callEvent();
+                if (e.isCancelled()) {
+                    event.setCancelled(true);
+                }
             }
         }
     }
