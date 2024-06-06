@@ -31,13 +31,14 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
 
             // Extract information from wrapper
             Player player = (Player) event.getPlayer();
-            BlockifyPosition position = new BlockifyPosition(wrapper.getBlockPosition().getX(), wrapper.getBlockPosition().getY(), wrapper.getBlockPosition().getZ());
 
             // Get stages the player is in. If the player is not in any stages, return.
             List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player);
             if (stages == null || stages.isEmpty()) {
                 return;
             }
+
+            BlockifyPosition position = new BlockifyPosition(wrapper.getBlockPosition().getX(), wrapper.getBlockPosition().getY(), wrapper.getBlockPosition().getZ());
 
             // Loop through all stages and views to find the block
             for (Stage stage : stages) {
