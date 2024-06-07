@@ -67,7 +67,7 @@ public class StageManager {
     public List<Stage> getStages(Player player) {
         List<Stage> stages = new ArrayList<>();
         for (Stage stage : this.stages.values()) {
-            if (stage.getAudience().getPlayers().contains(player)) {
+            if (stage.getAudience().getPlayers().contains(player.getUniqueId())) {
                 stages.add(stage);
             }
         }

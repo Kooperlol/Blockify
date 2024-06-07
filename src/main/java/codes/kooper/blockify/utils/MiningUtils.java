@@ -78,8 +78,8 @@ public class MiningUtils {
             }
         }
 
-        // Block break functionality
-        if (actionType == DiggingAction.FINISHED_DIGGING && blockStages.get(view).get(position).getStage() >= 9) {
+        // Block break functionality (CREATIVE)
+        if (actionType == DiggingAction.FINISHED_DIGGING && blockStages.get(view).get(position).getStage() >= 9 && player.getGameMode() == GameMode.CREATIVE) {
             breakCustomBlock(player, position, blockData, view);
         }
     }
@@ -98,10 +98,10 @@ public class MiningUtils {
         if (actionType == DiggingAction.FINISHED_DIGGING || canInstantBreak(player, blockData)) {
             Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> {
                 // Call BlockifyBreakEvent
-                BlockifyBreakEvent ghostBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
-                ghostBreakEvent.callEvent();
+                BlockifyBreakEvent blockifyBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
+                blockifyBreakEvent.callEvent();
                 // If block is not cancelled, break the block, otherwise, revert the block
-                if (!ghostBreakEvent.isCancelled()) {
+                if (!blockifyBreakEvent.isCancelled()) {
                     Blockify.getInstance().getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position, Material.AIR.createBlockData());
                     view.setBlock(position, Material.AIR.createBlockData());
                 } else {
@@ -148,11 +148,13 @@ public class MiningUtils {
             blockStage.setStage((byte) (blockStage.getStage() + 1));
             // Update last updated time to current time
             blockStage.setLastUpdated(System.currentTimeMillis());
-            // If block stage is greater than or equal to 9, break the block
-            if (blockStage.getStage() >= 9) {
+            // If block stage is 9, break the block
+            if (blockStage.getStage() == 9) {
                 breakCustomBlock(player, position, blockData, view);
-                player.spawnParticle(Particle.BLOCK_CRACK, position.getX() + 0.5, position.getY() + 0.5, position.getZ() + 0.5, 10, 0, 0, 0, blockData);
-                player.playSound(player.getLocation(), blockData.getSoundGroup().getBreakSound(), 1, 1);
+                Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> {
+                    player.spawnParticle(Particle.BLOCK_CRACK, position.getX() + 0.5, position.getY() + 0.5, position.getZ() + 0.5, 10, 0, 0, 0, blockData);
+                    player.playSound(player.getLocation(), blockData.getSoundGroup().getBreakSound(), 1, 1);
+                });
             }
         }
         // Send block break animation packet
@@ -175,14 +177,14 @@ public class MiningUtils {
         // Run synchronously as using Spigot API
         Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> {
             // Call BlockifyBreakEvent
-            BlockifyBreakEvent ghostBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
-            ghostBreakEvent.callEvent();
+            BlockifyBreakEvent blockifyBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
+            blockifyBreakEvent.callEvent();
             // If block stage exists, cancel the task and remove it from the map
             resetViewBlockAnimation(view, Set.of(position));
             // Remove mining fatigue effect
             player.removePotionEffect(PotionEffectType.SLOW_DIGGING);
             // If block is not cancelled, break the block, otherwise, revert the block
-            if (!ghostBreakEvent.isCancelled()) {
+            if (!blockifyBreakEvent.isCancelled()) {
                 Blockify.getInstance().getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position, Material.AIR.createBlockData());
                 view.setBlock(position, Material.AIR.createBlockData());
             } else {
