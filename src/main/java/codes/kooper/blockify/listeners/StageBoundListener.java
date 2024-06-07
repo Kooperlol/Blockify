@@ -126,7 +126,7 @@ public class StageBoundListener implements Listener {
     @EventHandler
     public void onPlayerEnterStage(PlayerEnterStageEvent event) {
         if (!event.getStage().getAudience().isArePlayersHidden()) return;
-        for (Player player : event.getStage().getAudience().getPlayers()) {
+        for (Player player : event.getStage().getAudience().getOnlinePlayers()) {
             if (player == null) continue;
             player.hidePlayer(Blockify.getInstance(), event.getPlayer());
             if (!event.getStage().isLocationWithin(player.getLocation())) continue;
@@ -145,7 +145,7 @@ public class StageBoundListener implements Listener {
     @EventHandler
     public void onPlayerExitStage(PlayerExitStageEvent event) {
         if (!event.getStage().getAudience().isArePlayersHidden()) return;
-        for (Player player : event.getStage().getAudience().getPlayers()) {
+        for (Player player : event.getStage().getAudience().getOnlinePlayers()) {
             if (player == null) continue;
             player.showPlayer(Blockify.getInstance(), event.getPlayer());
         }

@@ -71,7 +71,7 @@ public class MiningUtils {
             actionType = DiggingAction.FINISHED_DIGGING;
             blockStages.get(view).get(position).setStage((byte) 9);
             if (view.getStage().getAudience().getMiningSpeed(player) == 0) {
-                for (Player member : view.getStage().getAudience().getPlayers()) {
+                for (Player member : view.getStage().getAudience().getOnlinePlayers()) {
                     WrapperPlayServerBlockBreakAnimation wrapperPlayServerBlockBreakAnimation = new WrapperPlayServerBlockBreakAnimation(blockStages.get(view).get(position).getEntityId(), new Vector3i(position.getX(), position.getY(), position.getZ()), (byte) 9);
                     PacketEvents.getAPI().getPlayerManager().getUser(member).writePacket(wrapperPlayServerBlockBreakAnimation);
                 }
@@ -157,7 +157,7 @@ public class MiningUtils {
         }
         // Send block break animation packet
         if (!blockStages.containsKey(view) || blockStages.get(view) == null || !blockStages.get(view).containsKey(position) || blockStages.get(view).get(position).getStage() >= 9) return;
-        for (Player member : view.getStage().getAudience().getPlayers()) {
+        for (Player member : view.getStage().getAudience().getOnlinePlayers()) {
             WrapperPlayServerBlockBreakAnimation wrapperPlayServerBlockBreakAnimation = new WrapperPlayServerBlockBreakAnimation(blockStages.get(view).get(position).getEntityId(), new Vector3i(position.getX(), position.getY(), position.getZ()), blockStages.get(view).get(position).getStage());
             PacketEvents.getAPI().getPlayerManager().sendPacket(member, wrapperPlayServerBlockBreakAnimation);
         }
@@ -203,7 +203,7 @@ public class MiningUtils {
             if (blockStages.get(view).containsKey(position)) {
                 Bukkit.getScheduler().cancelTask(blockStages.get(view).get(position).getTask());
                 int id = blockStages.get(view).remove(position).getEntityId();
-                for (Player member : view.getStage().getAudience().getPlayers()) {
+                for (Player member : view.getStage().getAudience().getOnlinePlayers()) {
                     WrapperPlayServerBlockBreakAnimation wrapperPlayServerBlockBreakAnimation = new WrapperPlayServerBlockBreakAnimation(id, new Vector3i(position.getX(), position.getY(), position.getZ()), (byte) -1);
                     PacketEvents.getAPI().getPlayerManager().getUser(member).writePacket(wrapperPlayServerBlockBreakAnimation);
                 }
