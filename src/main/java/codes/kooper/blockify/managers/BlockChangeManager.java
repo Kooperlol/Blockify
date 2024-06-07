@@ -54,7 +54,7 @@ public class BlockChangeManager {
      * @param view   the view
      */
     public void sendView(Player player, View view) {
-        Audience audience = new Audience(new HashSet<>(Collections.singletonList(player)));
+        Audience audience = Audience.fromPlayers(new HashSet<>(Collections.singletonList(player)));
         ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks = new ConcurrentHashMap<>();
         for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : view.getBlocks().entrySet()) {
             if (!blocks.containsKey(entry.getKey())) {
@@ -73,7 +73,7 @@ public class BlockChangeManager {
      * @param view   the view
      */
     public void hideView(Player player, View view) {
-        Audience audience = new Audience(new HashSet<>(Collections.singletonList(player)));
+        Audience audience = Audience.fromPlayers(new HashSet<>(Collections.singletonList(player)));
         ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks = new ConcurrentHashMap<>();
         for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : view.getBlocks().entrySet()) {
             if (!blocks.containsKey(entry.getKey())) {
@@ -135,22 +135,19 @@ public class BlockChangeManager {
             blockCount += entry.getValue().size();
         }
         if (blockCount == 1) {
-            for (Player onlinePlayer : audience.getPlayers()) {
-                if (onlinePlayer != null) {
-                    if (onlinePlayer.getWorld() != stage.getWorld()) continue;
-                    for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
-                        BlockifyPosition position = entry.getValue().keySet().iterator().next();
-                        BlockData blockData = entry.getValue().values().iterator().next();
-                        onlinePlayer.sendBlockChange(position.toLocation(stage.getWorld()), blockData);
-                    }
+            for (Player onlinePlayer : audience.getOnlinePlayers()) {
+                if (onlinePlayer.getWorld() != stage.getWorld()) continue;
+                for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
+                    BlockifyPosition position = entry.getValue().keySet().iterator().next();
+                    BlockData blockData = entry.getValue().values().iterator().next();
+                    onlinePlayer.sendBlockChange(position.toLocation(stage.getWorld()), blockData);
                 }
             }
             return;
         }
 
         // Send multiple block changes to the players
-        for (Player onlinePlayer : audience.getPlayers()) {
-            if (onlinePlayer == null) continue;
+        for (Player onlinePlayer : audience.getOnlinePlayers()) {
             Location playerLocation = onlinePlayer.getLocation();
             if (playerLocation.getWorld() != stage.getWorld()) continue;
 
