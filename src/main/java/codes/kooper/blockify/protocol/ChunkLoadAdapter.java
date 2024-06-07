@@ -32,14 +32,15 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
 
             // Loop through the stages and views to check if the chunk is in the view.
             for (Stage stage : stages) {
+
+                // If the chunk is not in the world, return.
+                if (!stage.getWorld().equals(player.getWorld())) return;
+
                 for (View view : stage.getViews()) {
 
                     // Check if the view has any blocks in the bound in the first place
                     if (!view.hasChunk(chunkX, chunkZ)) return;
                     BlockifyChunk blockifyChunk = new BlockifyChunk(chunkX, chunkZ);
-
-                    // If the chunk is not in the world, return.
-                    if (!stage.getWorld().equals(player.getWorld())) return;
 
                     Blockify.getInstance().getBlockChangeManager().sendChunkPacket(stage, player, blockifyChunk, view.getBlocks());
                 }
