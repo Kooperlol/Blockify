@@ -24,7 +24,7 @@ Check out the [Wiki](https://github.com/Kooperlol/Blockify/wiki) to get started,
 
 ## Credits
 - **[Kooper](https://github.com/Kooperlol)**: Project Lead
-- **[Zora](https://github.com/ReportCardsMC)**: Developer
+- **[Zora](https://github.com/ReportCardsMC)**: Mentor
 
 ## Inspiration
 - **[GhostCore](https://github.com/QuarryMC/GhostCore)**: The project was inspired by GhostCore, code that manages client-sided blocks for Quarry (an OP Prison server).
