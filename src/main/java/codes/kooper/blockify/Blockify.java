@@ -10,6 +10,7 @@ import codes.kooper.blockify.protocol.ChunkLoadAdapter;
 import codes.kooper.blockify.protocol.PlayerInfoAdapter;
 import codes.kooper.blockify.utils.MiningUtils;
 import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
 import lombok.Getter;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -19,6 +20,7 @@ public final class Blockify extends JavaPlugin {
     private StageManager stageManager;
     private BlockChangeManager blockChangeManager;
     private MiningUtils miningUtils;
+    private ServerVersion serverVersion;
 
     @Override
     public void onLoad() {
@@ -32,6 +34,7 @@ public final class Blockify extends JavaPlugin {
     @Override
     public void onEnable() {
         new Metrics(this, 21782);
+        serverVersion = PacketEvents.getAPI().getServerManager().getVersion();
         getLogger().info("Blockify has been enabled!");
 
         stageManager = new StageManager();

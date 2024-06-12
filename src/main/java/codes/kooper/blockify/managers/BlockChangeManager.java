@@ -21,7 +21,8 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Getter
 public class BlockChangeManager {
@@ -147,15 +148,13 @@ public class BlockChangeManager {
         }
 
         // Send multiple block changes to the players
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
         for (Player onlinePlayer : audience.getOnlinePlayers()) {
             Location playerLocation = onlinePlayer.getLocation();
             if (playerLocation.getWorld() != stage.getWorld()) continue;
 
-            // The chunk index is used to keep track of the current chunk being sent
-            AtomicInteger chunkIndex = new AtomicInteger(0);
             // Create an array of chunks to send from the block changes map
-            List<BlockifyChunk> chunksToSend = new ArrayList<>(List.of(blockChanges.keySet().toArray(new BlockifyChunk[0])));
-            chunksToSend.sort((chunk1, chunk2) -> {
+            Comparator<BlockifyChunk> comparator = (chunk1, chunk2) -> {
                 // Get distance from chunks to player
                 int x = playerLocation.getBlockX() / 16;
                 int z = playerLocation.getBlockZ() / 16;
@@ -170,7 +169,9 @@ public class BlockChangeManager {
 
                 // Compare distances and return accordingly
                 return Integer.compare(distanceSquared1, distanceSquared2);
-            });
+            };
+            Queue<BlockifyChunk> chunksToSend = new PriorityQueue<>(comparator);
+            chunksToSend.addAll(blockChanges.keySet());
 
             // Create a task to send a chunk to the player every tick
             blockChangeTasks.put(onlinePlayer, Bukkit.getScheduler().runTaskTimer(Blockify.getInstance(), () -> {
@@ -178,6 +179,7 @@ public class BlockChangeManager {
                 if (!onlinePlayer.isOnline()) {
                     blockChangeTasks.computeIfPresent(onlinePlayer, (key, task) -> {
                         task.cancel();
+                        executorService.shutdown();
                         return null;
                     });
                     return;
@@ -186,24 +188,24 @@ public class BlockChangeManager {
                 // Loop through chunks per tick
                 for (int i = 0; i < stage.getChunksPerTick(); i++) {
                     // If the chunk index is greater than the chunks to send length
-                    if (chunkIndex.get() >= chunksToSend.size()) {
+                    if (chunksToSend.isEmpty()) {
                         // Safely cancel the task and remove it from the map
                         blockChangeTasks.computeIfPresent(onlinePlayer, (key, task) -> {
                             task.cancel();
+                            executorService.shutdown();
                             return null; // Remove the task
                         });
                         return;
                     }
 
                     // Get the chunk from the chunks to send array
-                    BlockifyChunk chunk = chunksToSend.get(chunkIndex.get());
-                    chunkIndex.getAndIncrement();
+                    BlockifyChunk chunk = chunksToSend.poll();
 
                     // Check if the chunk is loaded; if not, return
                     if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) return;
 
                     // Send the chunk packet to the player
-                    Bukkit.getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
+                    executorService.submit(() -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
                 }
             }, 0L, 1L));
         }
@@ -220,7 +222,7 @@ public class BlockChangeManager {
      */
     public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
         // Get the user from PacketEvents API
-        User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
+        final User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
 
         // Loop through the chunks y positions
         for (int chunkY = stage.getMinPosition().getY() >> 4; chunkY <= stage.getMaxPosition().getY() >> 4; chunkY++) {
@@ -250,7 +252,8 @@ public class BlockChangeManager {
             // Send the packet to the player
             WrapperPlayServerMultiBlockChange.EncodedBlock[] encodedBlocksArray = encodedBlocks.toArray(new WrapperPlayServerMultiBlockChange.EncodedBlock[0]);
             WrapperPlayServerMultiBlockChange wrapper = new WrapperPlayServerMultiBlockChange(new Vector3i(chunk.x(), chunkY, chunk.z()), true, encodedBlocksArray);
-            Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> user.sendPacket(wrapper));
+            if (user == null || !player.isOnline()) return;
+            user.sendPacket(wrapper);
         }
     }
 

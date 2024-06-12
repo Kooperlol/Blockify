@@ -15,6 +15,7 @@ import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPl
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockChange;
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 
@@ -51,7 +52,7 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
                         Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new BlockifyInteractEvent(player, position.toPosition(), blockData, view, view.getStage()).callEvent());
 
                         // Check if block is breakable, if not, send block change packet to cancel the break
-                        if (!view.isBreakable()) {
+                        if (!view.isBreakable() || blockData.getMaterial() == Material.BEDROCK) {
                             WrapperPlayServerBlockChange wrapperPlayServerBlockChange = new WrapperPlayServerBlockChange(new Vector3i(position.getX(), position.getY(), position.getZ()), SpigotConversionUtil.fromBukkitBlockData(blockData).getGlobalId());
                             PacketEvents.getAPI().getPlayerManager().sendPacket(player, wrapperPlayServerBlockChange);
                             return;

@@ -41,6 +41,15 @@ public class BlockifyPosition {
     }
 
     /**
+     * Create a new BlockifyPosition
+     *
+     * @param vector The vector to create the BlockifyPosition from
+     */
+    public static BlockifyPosition fromVector(Vector vector) {
+        return new BlockifyPosition(vector.getBlockX(), vector.getBlockY(), vector.getBlockZ());
+    }
+
+    /**
      * Creates new BlockifyPositions
      *
      * @param locations The locations to create the BlockifyPosition from

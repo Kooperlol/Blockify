@@ -6,6 +6,7 @@ import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyBlockStage;
 import codes.kooper.blockify.types.BlockifyPosition;
 import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import com.github.retrooper.packetevents.protocol.player.DiggingAction;
 import com.github.retrooper.packetevents.util.Vector3i;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockBreakAnimation;
@@ -15,6 +16,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
@@ -119,7 +121,11 @@ public class MiningUtils {
      * @return boolean
      */
     public boolean canInstantBreak(Player player, BlockData blockData) {
-        return blockData.getDestroySpeed(player.getInventory().getItemInMainHand(), true) >= blockData.getMaterial().getHardness() * 30 || player.getGameMode() == GameMode.CREATIVE;
+        if (Blockify.getInstance().getServerVersion().isOlderThan(ServerVersion.V_1_20)) {
+            return calculateMiningTimeInMilliseconds(blockData, player) <= 50;
+        } else {
+            return blockData.getDestroySpeed(player.getInventory().getItemInMainHand(), true) >= blockData.getMaterial().getHardness() * 30 || player.getGameMode() == GameMode.CREATIVE;
+        }
     }
 
     /**
@@ -229,6 +235,8 @@ public class MiningUtils {
         double speedMultiplier = 1.0;
         // Check if player is using the preferred tool
         boolean isPreferredTool = block.isPreferredTool(player.getInventory().getItemInMainHand());
+        // Efficiency level
+        int efficiencyLevel = player.getInventory().getItemInMainHand().getEnchantmentLevel(Enchantment.DIG_SPEED);
         // Check if player can harvest the block
         boolean canHarvest = isPreferredTool && block.requiresCorrectToolForDrops();
         // If player is using the preferred tool, get the speed multiplier, otherwise, set it to 1.0
@@ -236,6 +244,8 @@ public class MiningUtils {
             speedMultiplier = getToolSpeed(player.getInventory().getItemInMainHand(), block);
             if (!canHarvest) {
                 speedMultiplier = 1.0;
+            } else if (efficiencyLevel > 0) {
+                speedMultiplier += Math.pow(efficiencyLevel, 2) + 1;
             }
         }
 
