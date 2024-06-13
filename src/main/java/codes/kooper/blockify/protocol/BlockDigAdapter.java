@@ -5,17 +5,12 @@ import codes.kooper.blockify.events.BlockifyInteractEvent;
 import codes.kooper.blockify.models.Stage;
 import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyPosition;
-import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.event.SimplePacketListenerAbstract;
 import com.github.retrooper.packetevents.event.simple.PacketPlayReceiveEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.player.DiggingAction;
-import com.github.retrooper.packetevents.util.Vector3i;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerDigging;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockChange;
-import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 
@@ -52,9 +47,8 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
                         Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new BlockifyInteractEvent(player, position.toPosition(), blockData, view, view.getStage()).callEvent());
 
                         // Check if block is breakable, if not, send block change packet to cancel the break
-                        if (!view.isBreakable() || blockData.getMaterial() == Material.BEDROCK) {
-                            WrapperPlayServerBlockChange wrapperPlayServerBlockChange = new WrapperPlayServerBlockChange(new Vector3i(position.getX(), position.getY(), position.getZ()), SpigotConversionUtil.fromBukkitBlockData(blockData).getGlobalId());
-                            PacketEvents.getAPI().getPlayerManager().sendPacket(player, wrapperPlayServerBlockChange);
+                        if (!view.isBreakable()) {
+                            player.sendBlockChange(position.toLocation(player.getWorld()), blockData);
                             return;
                         }
 

@@ -20,9 +20,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 @Getter
 public class BlockChangeManager {
@@ -103,10 +101,10 @@ public class BlockChangeManager {
     /**
      * Sends a block change to the audience.
      *
-     * @param stage        the stage
-     * @param audience     the audience
-     * @param position     the position
-     * @param blockData    the block data
+     * @param stage     the stage
+     * @param audience  the audience
+     * @param position  the position
+     * @param blockData the block data
      */
     public void sendBlockChange(Stage stage, Audience audience, BlockifyPosition position, BlockData blockData) {
         ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = new ConcurrentHashMap<>();
@@ -173,16 +171,14 @@ public class BlockChangeManager {
             Queue<BlockifyChunk> chunksToSend = new PriorityQueue<>(comparator);
             chunksToSend.addAll(blockChanges.keySet());
 
+            // Create a CountDownLatch to track the number of tasks
+            CountDownLatch latch = new CountDownLatch(chunksToSend.size());
+
             // Create a task to send a chunk to the player every tick
             blockChangeTasks.put(onlinePlayer, Bukkit.getScheduler().runTaskTimer(Blockify.getInstance(), () -> {
                 // Check if player is online, if not, cancel the task
                 if (!onlinePlayer.isOnline()) {
-                    blockChangeTasks.computeIfPresent(onlinePlayer, (key, task) -> {
-                        task.cancel();
-                        executorService.shutdown();
-                        return null;
-                    });
-                    return;
+                    cancelExecutorService(executorService, onlinePlayer, latch);
                 }
 
                 // Loop through chunks per tick
@@ -190,11 +186,7 @@ public class BlockChangeManager {
                     // If the chunk index is greater than the chunks to send length
                     if (chunksToSend.isEmpty()) {
                         // Safely cancel the task and remove it from the map
-                        blockChangeTasks.computeIfPresent(onlinePlayer, (key, task) -> {
-                            task.cancel();
-                            executorService.shutdown();
-                            return null; // Remove the task
-                        });
+                        cancelExecutorService(executorService, onlinePlayer, latch);
                         return;
                     }
 
@@ -202,10 +194,19 @@ public class BlockChangeManager {
                     BlockifyChunk chunk = chunksToSend.poll();
 
                     // Check if the chunk is loaded; if not, return
-                    if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) return;
+                    if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) {
+                        latch.countDown();
+                        continue;
+                    }
 
                     // Send the chunk packet to the player
-                    executorService.submit(() -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
+                    executorService.submit(() -> {
+                        try {
+                            sendChunkPacket(stage, onlinePlayer, chunk, blockChanges);
+                        } finally {
+                            latch.countDown();
+                        }
+                    });
                 }
             }, 0L, 1L));
         }
@@ -215,10 +216,10 @@ public class BlockChangeManager {
      * Sends a chunk packet to the player.
      * Call Asynchronously
      *
-     * @param stage         the stage
-     * @param player        the player
-     * @param chunk         the chunk
-     * @param blockChanges  the block changes
+     * @param stage        the stage
+     * @param player       the player
+     * @param chunk        the chunk
+     * @param blockChanges the block changes
      */
     public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
         // Get the user from PacketEvents API
@@ -244,6 +245,7 @@ public class BlockChangeManager {
                     int x = position.getX() & 0xF;
                     int y = position.getY();
                     int z = position.getZ() & 0xF;
+
                     // Add the encoded block to the list
                     encodedBlocks.add(new WrapperPlayServerMultiBlockChange.EncodedBlock(id, x, y, z));
                 }
@@ -252,10 +254,31 @@ public class BlockChangeManager {
             // Send the packet to the player
             WrapperPlayServerMultiBlockChange.EncodedBlock[] encodedBlocksArray = encodedBlocks.toArray(new WrapperPlayServerMultiBlockChange.EncodedBlock[0]);
             WrapperPlayServerMultiBlockChange wrapper = new WrapperPlayServerMultiBlockChange(new Vector3i(chunk.x(), chunkY, chunk.z()), true, encodedBlocksArray);
-            if (user == null || !player.isOnline()) return;
             user.sendPacket(wrapper);
         }
     }
 
-
+    /**
+     * Cancels the executor service and task for the player.
+     *
+     * @param executorService the executor service
+     * @param onlinePlayer    the online player
+     * @param latch           the latch to wait for tasks completion
+     */
+    private void cancelExecutorService(ExecutorService executorService, Player onlinePlayer, CountDownLatch latch) {
+        blockChangeTasks.computeIfPresent(onlinePlayer, (key, task) -> {
+            task.cancel();
+            try {
+                if (latch.await(60, TimeUnit.SECONDS)) {
+                    executorService.shutdown();
+                } else {
+                    executorService.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executorService.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+            return null;
+        });
+    }
 }

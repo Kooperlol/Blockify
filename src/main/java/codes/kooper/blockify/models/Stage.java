@@ -74,14 +74,13 @@ public class Stage {
         ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = new ConcurrentHashMap<>();
         for (View view : views) {
             for (BlockifyPosition position : blocks) {
-                if (view.hasBlock(position)) {
-                    if (blockChanges.containsKey(position.toBlockifyChunk())) {
-                        blockChanges.get(position.toBlockifyChunk()).put(position, view.getBlock(position));
-                    } else {
-                        ConcurrentHashMap<BlockifyPosition, BlockData> blockData = new ConcurrentHashMap<>();
-                        blockData.put(position, view.getBlock(position));
-                        blockChanges.put(position.toBlockifyChunk(), blockData);
-                    }
+                if (!view.hasBlock(position)) continue;
+                if (blockChanges.containsKey(position.toBlockifyChunk())) {
+                    blockChanges.get(position.toBlockifyChunk()).put(position, view.getBlock(position));
+                } else {
+                    ConcurrentHashMap<BlockifyPosition, BlockData> blockData = new ConcurrentHashMap<>();
+                    blockData.put(position, view.getBlock(position));
+                    blockChanges.put(position.toBlockifyChunk(), blockData);
                 }
             }
         }
