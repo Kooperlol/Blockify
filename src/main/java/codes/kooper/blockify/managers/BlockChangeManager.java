@@ -9,9 +9,10 @@ import codes.kooper.blockify.types.BlockifyChunk;
 import codes.kooper.blockify.types.BlockifyPosition;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.protocol.player.User;
+import com.github.retrooper.packetevents.protocol.world.chunk.BaseChunk;
+import com.github.retrooper.packetevents.protocol.world.chunk.Column;
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
-import com.github.retrooper.packetevents.util.Vector3i;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerMultiBlockChange;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChunkData;
 import lombok.Getter;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -220,14 +221,14 @@ public class BlockChangeManager {
      */
     public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
         // Get the user from PacketEvents API
-        User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
+        final User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
 
         // Loop through the chunks y positions
+        List<BaseChunk> chunks = new ArrayList<>();
         for (int chunkY = stage.getMinPosition().getY() >> 4; chunkY <= stage.getMaxPosition().getY() >> 4; chunkY++) {
-            // Create a list of encoded blocks for PacketEvents wrapper
-            List<WrapperPlayServerMultiBlockChange.EncodedBlock> encodedBlocks = new ArrayList<>();
 
             // Loop through the blocks to send
+            BaseChunk baseChunk = BaseChunk.create();
             for (Map.Entry<BlockifyPosition, BlockData> entry : blockChanges.get(chunk).entrySet()) {
                 BlockifyPosition position = entry.getKey();
                 int blockY = position.getY();
@@ -235,23 +236,23 @@ public class BlockChangeManager {
                 // Check if the block is in the current y section
                 if (blockY >> 4 == chunkY) {
                     BlockData blockData = entry.getValue();
-                    // Get the block data ID
-                    blockDataToId.computeIfAbsent(blockData, bd -> WrappedBlockState.getByString(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), bd.getAsString(false)).getGlobalId());
 
-                    int id = blockDataToId.get(blockData);
                     int x = position.getX() & 0xF;
-                    int y = position.getY();
+                    int y = position.getY() & 0xF;
                     int z = position.getZ() & 0xF;
+
                     // Add the encoded block to the list
-                    encodedBlocks.add(new WrapperPlayServerMultiBlockChange.EncodedBlock(id, x, y, z));
+                    baseChunk.set(x, y, z, blockDataToId.computeIfAbsent(blockData, bd -> WrappedBlockState.getByString(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), bd.getAsString(false)).getGlobalId()));
                 }
             }
-
-            // Send the packet to the player
-            WrapperPlayServerMultiBlockChange.EncodedBlock[] encodedBlocksArray = encodedBlocks.toArray(new WrapperPlayServerMultiBlockChange.EncodedBlock[0]);
-            WrapperPlayServerMultiBlockChange wrapper = new WrapperPlayServerMultiBlockChange(new Vector3i(chunk.x(), chunkY, chunk.z()), true, encodedBlocksArray);
-            Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> user.sendPacket(wrapper));
+            chunks.add(baseChunk);
         }
+
+        // Send the packet to the player
+        Column column = new Column(chunk.x(), chunk.z(), false, chunks.toArray(new BaseChunk[0]), null);
+        WrapperPlayServerChunkData wrapper = new WrapperPlayServerChunkData(column);
+        if (user == null || !player.isOnline()) return;
+        user.sendPacket(wrapper);
     }
 
 }
