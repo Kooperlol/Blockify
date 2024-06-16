@@ -8,9 +8,12 @@ import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyChunk;
 import codes.kooper.blockify.types.BlockifyPosition;
 import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.netty.channel.ChannelHelper;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.protocol.world.chunk.BaseChunk;
 import com.github.retrooper.packetevents.protocol.world.chunk.Column;
+import com.github.retrooper.packetevents.protocol.world.chunk.LightData;
+import com.github.retrooper.packetevents.protocol.world.chunk.TileEntity;
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChunkData;
 import lombok.Getter;
@@ -249,10 +252,18 @@ public class BlockChangeManager {
         }
 
         // Send the packet to the player
-        Column column = new Column(chunk.x(), chunk.z(), false, chunks.toArray(new BaseChunk[0]), null);
-        WrapperPlayServerChunkData wrapper = new WrapperPlayServerChunkData(column);
-        if (user == null || !player.isOnline()) return;
-        user.sendPacket(wrapper);
+        Column column = new Column(chunk.x(), chunk.z(), false, chunks.toArray(new BaseChunk[0]), new TileEntity[0]);
+        LightData lightData = new LightData();
+        lightData.setBlockLightCount(2048);
+        lightData.setSkyLightCount(4);
+        lightData.setBlockLightArray(new byte[2048][]);
+        lightData.setSkyLightArray(new byte[2048][]);
+        lightData.setBlockLightMask(new BitSet(2048));
+        lightData.setSkyLightMask(new BitSet(2048));
+        lightData.setEmptySkyLightMask(new BitSet(2048));
+        lightData.setEmptyBlockLightMask(new BitSet(2048));
+        WrapperPlayServerChunkData wrapper = new WrapperPlayServerChunkData(column, lightData);
+        ChannelHelper.runInEventLoop(user.getChannel(), () -> user.sendPacket(wrapper));
     }
 
 }
