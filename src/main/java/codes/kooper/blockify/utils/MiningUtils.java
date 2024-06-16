@@ -6,7 +6,6 @@ import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyBlockStage;
 import codes.kooper.blockify.types.BlockifyPosition;
 import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import com.github.retrooper.packetevents.protocol.player.DiggingAction;
 import com.github.retrooper.packetevents.util.Vector3i;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockBreakAnimation;
@@ -121,11 +120,7 @@ public class MiningUtils {
      * @return boolean
      */
     public boolean canInstantBreak(Player player, BlockData blockData) {
-        if (Blockify.getInstance().getServerVersion().isOlderThan(ServerVersion.V_1_20)) {
-            return calculateMiningTimeInMilliseconds(blockData, player) <= 50;
-        } else {
-            return blockData.getDestroySpeed(player.getInventory().getItemInMainHand(), true) >= blockData.getMaterial().getHardness() * 30 || player.getGameMode() == GameMode.CREATIVE;
-        }
+        return blockData.getDestroySpeed(player.getInventory().getItemInMainHand(), true) >= blockData.getMaterial().getHardness() * 30 || player.getGameMode() == GameMode.CREATIVE;
     }
 
     /**
