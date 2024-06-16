@@ -139,7 +139,7 @@ public class BlockifyPosition {
      * @return The block state at the BlockifyPosition
      */
     public BlockState getBlockState(World world, BlockData blockData) {
-        BlockState state = toLocation(world).getBlock().getState().copy();
+        BlockState state = toLocation(world).getBlock().getState();
         state.setBlockData(blockData);
         state.setType(blockData.getMaterial());
         return state;

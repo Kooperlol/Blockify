@@ -6,16 +6,18 @@ import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyBlockStage;
 import codes.kooper.blockify.types.BlockifyPosition;
 import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import com.github.retrooper.packetevents.protocol.player.DiggingAction;
 import com.github.retrooper.packetevents.util.Vector3i;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockBreakAnimation;
 import lombok.Getter;
+import net.minecraft.world.item.enchantment.Enchantments;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.craftbukkit.v1_19_R3.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_19_R3.inventory.CraftItemStack;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -121,11 +123,7 @@ public class MiningUtils {
      * @return boolean
      */
     public boolean canInstantBreak(Player player, BlockData blockData) {
-        if (Blockify.getInstance().getServerVersion().isOlderThan(ServerVersion.V_1_20)) {
-            return calculateMiningTimeInMilliseconds(blockData, player) <= 50;
-        } else {
-            return blockData.getDestroySpeed(player.getInventory().getItemInMainHand(), true) >= blockData.getMaterial().getHardness() * 30 || player.getGameMode() == GameMode.CREATIVE;
-        }
+        return getDestroySpeed(player.getInventory().getItemInMainHand(), blockData) >= blockData.getMaterial().getHardness() * 30 || player.getGameMode() == GameMode.CREATIVE;
     }
 
     /**
@@ -242,9 +240,11 @@ public class MiningUtils {
         // If player is using the preferred tool, get the speed multiplier, otherwise, set it to 1.0
         if (isPreferredTool) {
             speedMultiplier = getToolSpeed(player.getInventory().getItemInMainHand(), block);
+            // If player can't harvest the block, set the speed multiplier to 1.0
             if (!canHarvest) {
                 speedMultiplier = 1.0;
             } else if (efficiencyLevel > 0) {
+                // If player can harvest the block and has efficiency level, increase the speed multiplier
                 speedMultiplier += Math.pow(efficiencyLevel, 2) + 1;
             }
         }
@@ -273,6 +273,18 @@ public class MiningUtils {
         double ticks = Math.round(1 / damage);
         double seconds = ticks / 20;
         return seconds * 1000;
+    }
+
+    private double getDestroySpeed(ItemStack itemStack, BlockData blockData) {
+        net.minecraft.world.item.ItemStack nmsItemStack = CraftItemStack.asNMSCopy(itemStack);
+        float speed = nmsItemStack.getDestroySpeed(CraftBlockData.newData(blockData.getMaterial(), null).getState());
+        if (speed > 1.0F) {
+            int enchantLevel = net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(Enchantments.BLOCK_EFFICIENCY, nmsItemStack);
+            if (enchantLevel > 0) {
+                speed += enchantLevel * enchantLevel + 1;
+            }
+        }
+        return speed;
     }
 
     /**

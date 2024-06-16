@@ -1,14 +1,15 @@
 plugins {
     id 'java'
+    id 'io.papermc.paperweight.userdev' version "1.7.1" // Check for new versions at https://plugins.gradle.org/plugin/io.papermc.paperweight.userdev
     id 'maven-publish'
 }
 
 group = 'codes.kooper'
-version = '1.1.6-beta'
+version = 'sunrealms-1.0.0'
 
 dependencies {
+    paperweight.paperDevBundle('1.19.4-R0.1-SNAPSHOT')
     implementation 'org.projectlombok:lombok:1.18.28'
-    compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
     compileOnly 'com.github.retrooper.packetevents:spigot:2.3.0'
 }
 
@@ -38,6 +39,10 @@ tasks.withType(JavaCompile).configureEach {
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
         options.release = targetJavaVersion
     }
+}
+
+tasks.assemble {
+    dependsOn(tasks.reobfJar)
 }
 
 tasks.withType(JavaCompile) {
