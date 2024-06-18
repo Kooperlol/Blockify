@@ -8,6 +8,7 @@ import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyChunk;
 import codes.kooper.blockify.types.BlockifyPosition;
 import com.github.retrooper.packetevents.PacketEvents;
+import com.github.retrooper.packetevents.netty.channel.ChannelHelper;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
 import com.github.retrooper.packetevents.util.Vector3i;
@@ -247,10 +248,14 @@ public class BlockChangeManager {
                 }
             }
 
+            // Check if there are no encoded blocks to send
+            if (encodedBlocks.isEmpty()) continue;
+
             // Send the packet to the player
             WrapperPlayServerMultiBlockChange.EncodedBlock[] encodedBlocksArray = encodedBlocks.toArray(new WrapperPlayServerMultiBlockChange.EncodedBlock[0]);
             WrapperPlayServerMultiBlockChange wrapper = new WrapperPlayServerMultiBlockChange(new Vector3i(chunk.x(), chunkY, chunk.z()), true, encodedBlocksArray);
-            Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> user.sendPacket(wrapper));
+            if (user == null || !player.isOnline()) return;
+            ChannelHelper.runInEventLoop(user.getChannel(), () -> user.sendPacket(wrapper));
         }
     }
 
