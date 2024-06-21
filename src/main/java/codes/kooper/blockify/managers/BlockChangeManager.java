@@ -247,6 +247,11 @@ public class BlockChangeManager {
                 }
             }
 
+            // If there are no encoded blocks, skip the chunk
+            if (encodedBlocks.isEmpty()) {
+                continue;
+            }
+
             // Send the packet to the player
             WrapperPlayServerMultiBlockChange.EncodedBlock[] encodedBlocksArray = encodedBlocks.toArray(new WrapperPlayServerMultiBlockChange.EncodedBlock[0]);
             WrapperPlayServerMultiBlockChange wrapper = new WrapperPlayServerMultiBlockChange(new Vector3i(chunk.x(), chunkY, chunk.z()), true, encodedBlocksArray);
