@@ -8,7 +8,7 @@ import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyChunk;
 import codes.kooper.blockify.types.BlockifyPosition;
 import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.netty.channel.ChannelHelper;
+import com.github.retrooper.packetevents.protocol.ProtocolVersion;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.protocol.world.chunk.BaseChunk;
 import com.github.retrooper.packetevents.protocol.world.chunk.Column;
@@ -217,53 +217,98 @@ public class BlockChangeManager {
      * Sends a chunk packet to the player.
      * Call Asynchronously
      *
-     * @param stage         the stage
-     * @param player        the player
-     * @param chunk         the chunk
-     * @param blockChanges  the block changes
+     * @param stage        the stage
+     * @param player       the player
+     * @param chunk        the chunk
+     * @param blockChanges the block changes
      */
     public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
         // Get the user from PacketEvents API
         final User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
 
-        // Loop through the chunks y positions
-        List<BaseChunk> chunks = new ArrayList<>();
-        for (int chunkY = stage.getMinPosition().getY() >> 4; chunkY <= stage.getMaxPosition().getY() >> 4; chunkY++) {
-
-            // Loop through the blocks to send
-            BaseChunk baseChunk = BaseChunk.create();
-            for (Map.Entry<BlockifyPosition, BlockData> entry : blockChanges.get(chunk).entrySet()) {
-                BlockifyPosition position = entry.getKey();
-                int blockY = position.getY();
-
-                // Check if the block is in the current y section
-                if (blockY >> 4 == chunkY) {
-                    BlockData blockData = entry.getValue();
-
-                    int x = position.getX() & 0xF;
-                    int y = position.getY() & 0xF;
-                    int z = position.getZ() & 0xF;
-
-                    // Add the encoded block to the list
-                    baseChunk.set(x, y, z, blockDataToId.computeIfAbsent(blockData, bd -> WrappedBlockState.getByString(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), bd.getAsString(false)).getGlobalId()));
-                }
-            }
-            chunks.add(baseChunk);
+        if (user == null) {
+            System.err.println("User is null for player: " + player.getName());
+            return;
         }
 
-        // Send the packet to the player
-        Column column = new Column(chunk.x(), chunk.z(), false, chunks.toArray(new BaseChunk[0]), new TileEntity[0]);
-        LightData lightData = new LightData();
-        lightData.setBlockLightCount(2048);
-        lightData.setSkyLightCount(4);
-        lightData.setBlockLightArray(new byte[2048][]);
-        lightData.setSkyLightArray(new byte[2048][]);
-        lightData.setBlockLightMask(new BitSet(2048));
-        lightData.setSkyLightMask(new BitSet(2048));
-        lightData.setEmptySkyLightMask(new BitSet(2048));
-        lightData.setEmptyBlockLightMask(new BitSet(2048));
-        WrapperPlayServerChunkData wrapper = new WrapperPlayServerChunkData(column, lightData);
-        ChannelHelper.runInEventLoop(user.getChannel(), () -> user.sendPacket(wrapper));
+        // Check if the chunk exists in blockChanges
+        if (!blockChanges.containsKey(chunk)) {
+            System.err.println("Chunk not found in blockChanges for: " + chunk);
+            return;
+        }
+
+        // List to hold chunk sections
+        List<BaseChunk> chunks = new ArrayList<>();
+        int minY = stage.getMinPosition().getY() >> 4;
+        int maxY = stage.getMaxPosition().getY() >> 4;
+
+        // BitSets for light masks
+        BitSet blockLightMask = new BitSet();
+        BitSet skyLightMask = new BitSet();
+        BitSet emptyBlockLightMask = new BitSet();
+        BitSet emptySkyLightMask = new BitSet();
+
+        // Arrays for light data
+        int numSections = maxY - minY + 1;
+        byte[][] blockLightArray = new byte[numSections][];
+        byte[][] skyLightArray = new byte[numSections][];
+
+        // Loop through y sections in the chunk
+        for (int chunkY = minY; chunkY <= maxY; chunkY++) {
+            BaseChunk baseChunk = BaseChunk.create();
+            ConcurrentHashMap<BlockifyPosition, BlockData> chunkBlockChanges = blockChanges.get(chunk);
+
+            // Check for null to avoid NPE
+            if (chunkBlockChanges != null) {
+                for (Map.Entry<BlockifyPosition, BlockData> entry : chunkBlockChanges.entrySet()) {
+                    BlockifyPosition position = entry.getKey();
+                    int blockY = position.getY();
+
+                    // Only process blocks in the current section
+                    if ((blockY >> 4) == chunkY) {
+                        BlockData blockData = entry.getValue();
+                        int x = position.getX() & 0xF;
+                        int y = blockY & 0xF;
+                        int z = position.getZ() & 0xF;
+
+                        // Set block in chunk
+                        baseChunk.set(x, y, z, blockDataToId.computeIfAbsent(blockData, bd ->
+                                WrappedBlockState.getByString(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), bd.getAsString(false)).getGlobalId()));
+                    }
+                }
+            }
+
+            chunks.add(baseChunk);
+
+            int sectionIndex = chunkY - minY;
+
+            blockLightArray[sectionIndex] = createFullyLitArray();
+            skyLightArray[sectionIndex] = createFullyLitArray();
+
+            // Update light masks
+            blockLightMask.set(sectionIndex, true);
+            skyLightMask.set(sectionIndex, true);
+            emptyBlockLightMask.set(sectionIndex, false);
+            emptySkyLightMask.set(sectionIndex, false);
+        }
+
+        // Create light data object
+        LightData lightData = new LightData(false, blockLightMask, skyLightMask, emptyBlockLightMask, emptySkyLightMask, skyLightArray.length, blockLightArray.length, skyLightArray, blockLightArray);
+
+        // Assuming tile entities are handled separately
+        TileEntity[] tileEntities = new TileEntity[0];
+
+        // Create column with the modified chunks
+        Column column = new Column(chunk.x(), chunk.z(), false, chunks.toArray(new BaseChunk[0]), tileEntities);
+
+        // Send updated chunk data to the player
+        WrapperPlayServerChunkData packet = new WrapperPlayServerChunkData(column, lightData);
+        PacketEvents.getAPI().getPlayerManager().sendPacket(player, packet);
     }
 
+    private byte[] createFullyLitArray() {
+        byte[] fullyLitArray = new byte[2048];
+        Arrays.fill(fullyLitArray, (byte) 0xFF);
+        return fullyLitArray;
+    }
 }
