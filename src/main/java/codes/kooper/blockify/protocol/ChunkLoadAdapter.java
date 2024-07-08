@@ -10,7 +10,6 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChunkData;
 import org.bukkit.entity.Player;
 
-import java.util.Arrays;
 import java.util.List;
 
 public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
@@ -43,7 +42,7 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
                     if (!view.hasChunk(chunkX, chunkZ)) continue;
 
                     BlockifyChunk blockifyChunk = new BlockifyChunk(chunkX, chunkZ);
-                    Blockify.getInstance().getBlockChangeManager().sendChunkPacket(stage, player, blockifyChunk, view.getBlocks());
+                    Blockify.getInstance().getBlockChangeManager().sendChunkPacket(player, blockifyChunk, view.getBlocks());
                 }
             }
         }
