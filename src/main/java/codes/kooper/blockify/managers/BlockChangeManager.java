@@ -7,12 +7,21 @@ import codes.kooper.blockify.models.Stage;
 import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyChunk;
 import codes.kooper.blockify.types.BlockifyPosition;
-import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.protocol.player.User;
 import lombok.Getter;
+import net.minecraft.core.BlockPosition;
+import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
+import net.minecraft.server.level.EntityPlayer;
+import net.minecraft.world.level.ChunkCoordIntPair;
+import net.minecraft.world.level.World;
+import net.minecraft.world.level.block.state.IBlockData;
+import net.minecraft.world.level.chunk.Chunk;
+import net.minecraft.world.level.chunk.ChunkSection;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.craftbukkit.v1_20_R3.CraftWorld;
+import org.bukkit.craftbukkit.v1_20_R3.block.data.CraftBlockData;
+import org.bukkit.craftbukkit.v1_20_R3.entity.CraftPlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
@@ -26,7 +35,6 @@ public class BlockChangeManager {
 
     public BlockChangeManager() {
         this.blockChangeTasks = new ConcurrentHashMap<>();
-        this.blockDataToId = new ConcurrentHashMap<>();
     }
 
     /**
@@ -214,14 +222,6 @@ public class BlockChangeManager {
      * @param blockChanges the block changes
      */
     public void sendChunkPacket(Player player, BlockifyChunk chunk, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
-        // Get the user from PacketEvents API
-        final User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
-
-        if (user == null) {
-            System.err.println("User is null for player: " + player.getName());
-            return;
-        }
-
         // Check if the chunk exists in blockChanges
         if (!blockChanges.containsKey(chunk)) {
             System.err.println("Chunk not found in blockChanges for: " + chunk);
@@ -231,7 +231,13 @@ public class BlockChangeManager {
         ConcurrentHashMap<BlockifyPosition, BlockData> blockChangesMap = blockChanges.get(chunk);
         EntityPlayer entityPlayer = ((CraftPlayer) player).getHandle();
         World world = ((CraftWorld) player.getWorld()).getHandle();
+        Chunk originalChunk = world.d(chunk.x(), chunk.z());
         Chunk c = new Chunk(world, new ChunkCoordIntPair(chunk.x(), chunk.z()));
+
+        int i = 0;
+        for (ChunkSection section : originalChunk.d()) {
+            c.d()[i++] = new ChunkSection(section.h(), section.i().e());
+        }
 
         // Loop through y sections in the chunk
         for (Map.Entry<BlockifyPosition, BlockData> entry : blockChangesMap.entrySet()) {
@@ -240,13 +246,16 @@ public class BlockChangeManager {
             int blockY = position.getY();
             int x = position.getX() & 0xF;
             int z = position.getZ() & 0xF;
+            ChunkSection section = c.d()[blockY >> 4];
+            ChunkSection cs = new ChunkSection(section.h(), section.i().e());
 
-            // Set block in chunk
+            // Set block in chunk section
             IBlockData iBlockData = ((CraftBlockData) blockData).getState();
-            c.setType(new BlockPosition(x, blockY, z), iBlockData, false);
+            cs.a(x, blockY & 0xF, z, iBlockData);
+            c.d()[blockY >> 4] = cs;
         }
 
-        ClientboundLevelChunkWithLightPacket packet = new ClientboundLevelChunkWithLightPacket(chunk, world.z_(), new BitSet(), new BitSet());
+        ClientboundLevelChunkWithLightPacket packet = new ClientboundLevelChunkWithLightPacket(c, world.z_(), new BitSet(), new BitSet());
         entityPlayer.c.b(packet);
     }
 }

@@ -44,7 +44,7 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
                         BlockData blockData = view.getBlock(position);
 
                         // Call BlockifyInteractEvent to handle custom interaction
-                        Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new BlockifyInteractEvent(player, position.toPosition(), blockData, view, view.getStage()).callEvent());
+                        Bukkit.getScheduler().runTask(Blockify.getInstance(), () ->  Bukkit.getPluginManager().callEvent(new BlockifyInteractEvent(player, position.toVector(), blockData, view, view.getStage())));
 
                         // Check if block is breakable, if not, send block change packet to cancel the break
                         if (!view.isBreakable()) {

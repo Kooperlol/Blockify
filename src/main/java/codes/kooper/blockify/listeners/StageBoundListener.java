@@ -6,6 +6,7 @@ import codes.kooper.blockify.events.PlayerExitStageEvent;
 import codes.kooper.blockify.events.PlayerJoinStageEvent;
 import codes.kooper.blockify.events.PlayerLeaveStageEvent;
 import codes.kooper.blockify.models.Stage;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -34,13 +35,13 @@ public class StageBoundListener implements Listener {
         for (Stage stage : stages) {
             if (stage.isLocationWithin(event.getTo())) {
                 PlayerEnterStageEvent e = new PlayerEnterStageEvent(stage, player);
-                e.callEvent();
+                Bukkit.getPluginManager().callEvent(e);
                 if (e.isCancelled()) {
                     event.setCancelled(true);
                 }
             } else if (stage.isLocationWithin(event.getFrom())) {
                 PlayerExitStageEvent e = new PlayerExitStageEvent(stage, player);
-                e.callEvent();
+                Bukkit.getPluginManager().callEvent(e);
                 if (e.isCancelled()) {
                     event.setCancelled(true);
                 }
@@ -63,7 +64,7 @@ public class StageBoundListener implements Listener {
         List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player);
         for (Stage stage : stages) {
             if (stage.isLocationWithin(player.getLocation())) {
-                new PlayerEnterStageEvent(stage, player).callEvent();
+                Bukkit.getPluginManager().callEvent(new PlayerEnterStageEvent(stage, player));
             }
         }
     }
@@ -81,7 +82,7 @@ public class StageBoundListener implements Listener {
         Player player = event.getPlayer();
         List<Stage> stages = Blockify.getInstance().getStageManager().getStages(player);
         for (Stage stage : stages) {
-            new PlayerExitStageEvent(stage, player).callEvent();
+            Bukkit.getPluginManager().callEvent(new PlayerExitStageEvent(stage, player));
         }
     }
 
@@ -96,7 +97,7 @@ public class StageBoundListener implements Listener {
     @EventHandler
     public void onPlayerStageJoin(PlayerJoinStageEvent event) {
         if (event.getStage().isLocationWithin(event.getPlayer().getLocation())) {
-            new PlayerEnterStageEvent(event.getStage(), event.getPlayer()).callEvent();
+            Bukkit.getPluginManager().callEvent(new PlayerEnterStageEvent(event.getStage(), event.getPlayer()));
         }
     }
 
@@ -111,7 +112,7 @@ public class StageBoundListener implements Listener {
     @EventHandler
     public void onPlayerStageLeave(PlayerLeaveStageEvent event) {
         if (event.getStage().isLocationWithin(event.getPlayer().getLocation())) {
-            new PlayerExitStageEvent(event.getStage(), event.getPlayer()).callEvent();
+            Bukkit.getPluginManager().callEvent(new PlayerExitStageEvent(event.getStage(), event.getPlayer()));
         }
     }
 

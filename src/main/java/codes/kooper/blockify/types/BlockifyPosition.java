@@ -1,7 +1,5 @@
 package codes.kooper.blockify.types;
 
-import io.papermc.paper.math.BlockPosition;
-import io.papermc.paper.math.Position;
 import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Location;
@@ -59,33 +57,6 @@ public class BlockifyPosition {
     }
 
     /**
-     * Creates new BlockifyPositions
-     *
-     * @param blockPositions The block positions to create the BlockifyPosition from
-     */
-    public static Set<BlockifyPosition> fromPositions(Set<BlockPosition> blockPositions) {
-        return blockPositions.stream().map(BlockifyPosition::fromPosition).collect(Collectors.toSet());
-    }
-
-    /**
-     * Create a new BlockifyPosition
-     *
-     * @param position The position to create the BlockifyPosition from
-     */
-    public static BlockifyPosition fromPosition(Position position) {
-        return new BlockifyPosition(position.blockX(), position.blockY(), position.blockZ());
-    }
-
-    /**
-     * Converts the BlockifyPosition to a BlockPosition
-     *
-     * @return The BlockPosition representation of the BlockifyPosition
-     */
-    public BlockPosition toBlockPosition() {
-        return Position.block(x, y, z);
-    }
-
-    /**
      * Converts the BlockifyPosition to a BlockifyChunk
      *
      * @return The BlockifyChunk at the BlockifyPosition.
@@ -104,14 +75,6 @@ public class BlockifyPosition {
         return new Location(world, x, y, z);
     }
 
-    /**
-     * Converts the BlockifyPosition to a Position
-     *
-     * @return The Position representation of the BlockifyPosition
-     */
-    public Position toPosition() {
-        return Position.block(x, y, z);
-    }
 
     /**
      * Converts the BlockifyPosition to a Vector

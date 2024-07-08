@@ -1,6 +1,7 @@
 package codes.kooper.blockify.types;
 
-import org.bukkit.Chunk;
+import net.minecraft.world.level.chunk.Chunk;
+import net.minecraft.world.level.chunk.IChunkAccess;
 
 /**
  * Simple class to represent a chunk.
@@ -35,7 +36,7 @@ public record BlockifyChunk(int x, int z) {
      * @return The chunk key.
      */
     public long getChunkKey() {
-        return Chunk.getChunkKey(x, z);
+        return x ^ ((long) z << 32);
     }
 
     /**

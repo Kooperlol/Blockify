@@ -2,13 +2,13 @@ package codes.kooper.blockify.events;
 
 import codes.kooper.blockify.models.Stage;
 import codes.kooper.blockify.models.View;
-import io.papermc.paper.math.Position;
 import lombok.Getter;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
 @Getter
@@ -16,7 +16,7 @@ public class BlockifyBreakEvent extends Event implements Cancellable {
     private static final HandlerList HANDLERS = new HandlerList();
     private boolean cancelled = false;
     private final Player player;
-    private final Position position;
+    private final Vector position;
     private final BlockData blockData;
     private final View view;
     private final Stage stage;
@@ -30,7 +30,7 @@ public class BlockifyBreakEvent extends Event implements Cancellable {
      * @param view The view that the player is in.
      * @param stage The stage that the player is in.
      */
-    public BlockifyBreakEvent(Player player, Position position, BlockData blockData, View view, Stage stage) {
+    public BlockifyBreakEvent(Player player, Vector position, BlockData blockData, View view, Stage stage) {
         this.player = player;
         this.position = position;
         this.blockData = blockData;

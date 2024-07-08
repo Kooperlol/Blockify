@@ -6,7 +6,6 @@ import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyBlockStage;
 import codes.kooper.blockify.types.BlockifyPosition;
 import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import com.github.retrooper.packetevents.protocol.player.DiggingAction;
 import com.github.retrooper.packetevents.util.Vector3i;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerBlockBreakAnimation;
@@ -100,8 +99,8 @@ public class MiningUtils {
         if (actionType == DiggingAction.FINISHED_DIGGING || canInstantBreak(player, blockData)) {
             Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> {
                 // Call BlockifyBreakEvent
-                BlockifyBreakEvent blockifyBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
-                blockifyBreakEvent.callEvent();
+                BlockifyBreakEvent blockifyBreakEvent = new BlockifyBreakEvent(player, position.toVector(), blockData, view, view.getStage());
+                Bukkit.getPluginManager().callEvent(blockifyBreakEvent);
                 // If block is not cancelled, break the block, otherwise, revert the block
                 if (!blockifyBreakEvent.isCancelled()) {
                     Blockify.getInstance().getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position, Material.AIR.createBlockData());
@@ -121,11 +120,7 @@ public class MiningUtils {
      * @return boolean
      */
     public boolean canInstantBreak(Player player, BlockData blockData) {
-        if (Blockify.getInstance().getServerVersion().isOlderThan(ServerVersion.V_1_20)) {
-            return calculateMiningTimeInMilliseconds(blockData, player) <= 50;
-        } else {
-            return blockData.getDestroySpeed(player.getInventory().getItemInMainHand(), true) >= blockData.getMaterial().getHardness() * 30 || player.getGameMode() == GameMode.CREATIVE;
-        }
+        return calculateMiningTimeInMilliseconds(blockData, player) <= 50;
     }
 
     /**
@@ -183,8 +178,8 @@ public class MiningUtils {
         // Run synchronously as using Spigot API
         Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> {
             // Call BlockifyBreakEvent
-            BlockifyBreakEvent blockifyBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
-            blockifyBreakEvent.callEvent();
+            BlockifyBreakEvent blockifyBreakEvent = new BlockifyBreakEvent(player, position.toVector(), blockData, view, view.getStage());
+            Bukkit.getPluginManager().callEvent(blockifyBreakEvent);
             // If block stage exists, cancel the task and remove it from the map
             resetViewBlockAnimation(view, Set.of(position));
             // Remove mining fatigue effect
