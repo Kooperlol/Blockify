@@ -42,6 +42,10 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
                     if (!view.hasChunk(chunkX, chunkZ)) return;
                     BlockifyChunk blockifyChunk = new BlockifyChunk(chunkX, chunkZ);
 
+                    // Cancel the packet to prevent the player from seeing the chunk
+                    event.setCancelled(true);
+
+                    // Send the chunk packet to the player
                     Blockify.getInstance().getBlockChangeManager().sendChunkPacket(player, blockifyChunk, view.getBlocks());
                 }
             }

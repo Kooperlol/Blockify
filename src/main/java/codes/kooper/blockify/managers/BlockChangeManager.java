@@ -18,7 +18,10 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerCh
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import lombok.Getter;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
+import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
@@ -26,6 +29,8 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Getter
 public class BlockChangeManager {
@@ -226,19 +231,28 @@ public class BlockChangeManager {
         ConcurrentHashMap<BlockifyPosition, BlockData> blockData = blockChanges.get(chunk);
         int y = packetUser.getTotalWorldHeight() >> 4;
         Map<BlockData, WrappedBlockState> blockDataToState = new HashMap<>();
+        Chunk bukkitChunk = player.getWorld().getChunkAt(chunk.x(), chunk.z());
         List<BaseChunk> chunks = new ArrayList<>();
+        List<Block> blocks = getAllBlocksInChunk(bukkitChunk);
         for (int i = 0; i < y; i++) {
             Chunk_v1_18 baseChunk = new Chunk_v1_18();
+            int sectionMinY = i * 16;
+            int sectionMaxY = sectionMinY + 16;
 
-            // Iterate over block data to set blocks in the chunk
-            for (Map.Entry<BlockifyPosition, BlockData> entry : blockData.entrySet()) {
-                BlockifyPosition pos = entry.getKey();
-                BlockData data = entry.getValue();
+            for (Block block : blocks) {
+                int blockY = block.getY();
+                if (blockY >= sectionMinY && blockY < sectionMaxY) {
+                    BlockifyPosition pos = new BlockifyPosition(block.getX() & 0xF, blockY & 0xF, block.getZ() & 0xF);
+                    BlockData data = blockData.get(pos);
 
-                // Check if the block is within the current chunk section (i.e., y coordinate falls within the current section)
-                int sectionY = pos.getY() >> 4;
-                if (sectionY == i) {
-                    baseChunk.set(pos.getX() & 0xF, pos.getY() & 0xF, pos.getZ() & 0xF, blockDataToState.computeIfAbsent(data, block -> SpigotConversionUtil.fromBukkitBlockData(data)));
+                    if (data != null) {
+                        BlockData finalData1 = data;
+                        blockDataToState.computeIfAbsent(data, b -> SpigotConversionUtil.fromBukkitBlockData(finalData1));
+                    } else {
+                        data = block.getBlockData();
+                        BlockData finalData = data;
+                        blockDataToState.computeIfAbsent(data, b -> SpigotConversionUtil.fromBukkitBlockData(finalData));
+                    }
                 }
             }
 
@@ -274,4 +288,16 @@ public class BlockChangeManager {
         packetUser.sendPacketSilently(chunkData);
     }
 
+    private static List<Block> getAllBlocksInChunk(Chunk chunk) {
+        World world = chunk.getWorld();
+        int chunkX = chunk.getX() << 4;
+        int chunkZ = chunk.getZ() << 4;
+
+        // Stream over all x, y, and z coordinates within the chunk
+        return IntStream.range(0, 16).boxed()
+                .flatMap(x -> IntStream.range(0, 256).boxed()
+                        .flatMap(y -> IntStream.range(0, 16).boxed()
+                                .map(z -> world.getBlockAt(chunkX + x, y, chunkZ + z))))
+                .collect(Collectors.toList());
+    }
 }
