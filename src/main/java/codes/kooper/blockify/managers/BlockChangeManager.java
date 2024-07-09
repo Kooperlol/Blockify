@@ -271,7 +271,7 @@ public class BlockChangeManager {
         lightData.setEmptyBlockLightMask(emptyBitSet);
         lightData.setEmptySkyLightMask(emptyBitSet);
         WrapperPlayServerChunkData chunkData = new WrapperPlayServerChunkData(column, lightData);
-        packetUser.sendPacket(chunkData);
+        packetUser.sendPacketSilently(chunkData);
     }
 
 }
