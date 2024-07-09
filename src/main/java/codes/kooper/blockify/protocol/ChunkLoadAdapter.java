@@ -42,7 +42,7 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
                     if (!view.hasChunk(chunkX, chunkZ)) return;
                     BlockifyChunk blockifyChunk = new BlockifyChunk(chunkX, chunkZ);
 
-                    Blockify.getInstance().getBlockChangeManager().sendChunkPacket(stage, player, blockifyChunk, view.getBlocks());
+                    Blockify.getInstance().getBlockChangeManager().sendChunkPacket(player, blockifyChunk, view.getBlocks());
                 }
             }
         }
