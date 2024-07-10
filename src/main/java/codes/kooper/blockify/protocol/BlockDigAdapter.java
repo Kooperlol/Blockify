@@ -47,7 +47,7 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
                         BlockData blockData = view.getBlock(position);
 
                         // Call BlockifyInteractEvent to handle custom interaction
-                        Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new BlockifyInteractEvent(player, position.toPosition(), blockData, view, view.getStage()).callEvent());
+                        Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new BlockifyInteractEvent(player, position, blockData, view, view.getStage()).callEvent());
 
                         // Check if block is breakable, if not, send block change packet to cancel the break
                         if (!view.isBreakable()) {
@@ -59,12 +59,12 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
                         if (actionType == DiggingAction.FINISHED_DIGGING || canInstantBreak(player, blockData)) {
                             Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> {
                                 // Call BlockifyBreakEvent
-                                BlockifyBreakEvent blockifyBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
+                                BlockifyBreakEvent blockifyBreakEvent = new BlockifyBreakEvent(player, position, blockData, view, view.getStage());
                                 blockifyBreakEvent.callEvent();
                                 // If block is not cancelled, break the block, otherwise, revert the block
                                 if (!blockifyBreakEvent.isCancelled()) {
-                                    Blockify.getInstance().getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position, Material.AIR.createBlockData());
                                     view.setBlock(position, Material.AIR.createBlockData());
+                                    Blockify.getInstance().getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position);
                                 } else {
                                     player.sendBlockChange(position.toLocation(player.getWorld()), blockData);
                                 }
