@@ -8,6 +8,7 @@ import com.github.retrooper.packetevents.event.SimplePacketListenerAbstract;
 import com.github.retrooper.packetevents.event.simple.PacketPlaySendEvent;
 import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChunkData;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.List;
@@ -46,7 +47,7 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
                     event.setCancelled(true);
 
                     // Send the chunk packet to the player
-                    Blockify.getInstance().getBlockChangeManager().sendChunkPacket(player, blockifyChunk, view.getBlocks());
+                    Bukkit.getServer().getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> Blockify.getInstance().getBlockChangeManager().sendChunkPacket(player, blockifyChunk, view.getBlocks()));
                 }
             }
         }
