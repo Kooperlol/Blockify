@@ -1,5 +1,5 @@
 name: Blockify
-version: '1.0.0'
+version: '1.0.0-alpha'
 main: codes.kooper.blockify.Blockify
 api-version: '1.20'
 depend:

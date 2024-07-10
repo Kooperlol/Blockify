@@ -1,6 +1,7 @@
 package codes.kooper.blockify.protocol;
 
 import codes.kooper.blockify.Blockify;
+import codes.kooper.blockify.events.BlockifyBreakEvent;
 import codes.kooper.blockify.events.BlockifyInteractEvent;
 import codes.kooper.blockify.models.Stage;
 import codes.kooper.blockify.models.View;
@@ -11,6 +12,8 @@ import com.github.retrooper.packetevents.protocol.packettype.PacketType;
 import com.github.retrooper.packetevents.protocol.player.DiggingAction;
 import com.github.retrooper.packetevents.wrapper.play.client.WrapperPlayClientPlayerDigging;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
+import org.bukkit.Material;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
 
@@ -52,11 +55,20 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
                             return;
                         }
 
-                        // Check if player has custom mining speed, if so, handle custom digging, else handle normal digging
-                        if (view.getStage().getAudience().getMiningSpeed(player) != 1) {
-                            Blockify.getInstance().getMiningUtils().handleCustomDigging(player, view, actionType, blockData, position);
-                        } else {
-                            Blockify.getInstance().getMiningUtils().handleNormalDigging(player, view, actionType, blockData, position);
+                        // Block break functionality
+                        if (actionType == DiggingAction.FINISHED_DIGGING || canInstantBreak(player, blockData)) {
+                            Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> {
+                                // Call BlockifyBreakEvent
+                                BlockifyBreakEvent blockifyBreakEvent = new BlockifyBreakEvent(player, position.toPosition(), blockData, view, view.getStage());
+                                blockifyBreakEvent.callEvent();
+                                // If block is not cancelled, break the block, otherwise, revert the block
+                                if (!blockifyBreakEvent.isCancelled()) {
+                                    Blockify.getInstance().getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position, Material.AIR.createBlockData());
+                                    view.setBlock(position, Material.AIR.createBlockData());
+                                } else {
+                                    player.sendBlockChange(position.toLocation(player.getWorld()), blockData);
+                                }
+                            });
                         }
 
                         return;
@@ -66,4 +78,14 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
         }
     }
 
+    /**
+     * Check if player can instantly break block
+     *
+     * @param player    Player who is digging
+     * @param blockData BlockData of the block
+     * @return boolean
+     */
+    private boolean canInstantBreak(Player player, BlockData blockData) {
+        return blockData.getDestroySpeed(player.getInventory().getItemInMainHand(), true) >= blockData.getMaterial().getHardness() * 30 || player.getGameMode() == GameMode.CREATIVE;
+    }
 }
