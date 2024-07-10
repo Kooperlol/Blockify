@@ -18,6 +18,8 @@ import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerCh
 import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import lombok.Getter;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.ChunkSnapshot;
 import org.bukkit.Location;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
@@ -224,20 +226,38 @@ public class BlockChangeManager {
     public void sendChunkPacket(Player player, BlockifyChunk chunk, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
         User packetUser = PacketEvents.getAPI().getPlayerManager().getUser(player);
         ConcurrentHashMap<BlockifyPosition, BlockData> blockData = blockChanges.get(chunk);
-        int y = packetUser.getTotalWorldHeight() >> 4;
+        int ySections = packetUser.getTotalWorldHeight() >> 4;
         Map<BlockData, WrappedBlockState> blockDataToState = new HashMap<>();
         List<BaseChunk> chunks = new ArrayList<>();
-        for (int i = 0; i < y; i++) {
+        Chunk bukkitChunk = player.getWorld().getChunkAt(chunk.x(), chunk.z());
+        ChunkSnapshot chunkSnapshot = bukkitChunk.getChunkSnapshot();
+        int maxHeight = player.getWorld().getMaxHeight();
+        int minHeight = player.getWorld().getMinHeight();
+
+        for (int i = 0; i < ySections; i++) {
             Chunk_v1_18 baseChunk = new Chunk_v1_18();
 
-            for (Map.Entry<BlockifyPosition, BlockData> entry : blockData.entrySet()) {
-                if (entry.getKey().getY() >> 4 != i) continue;
-                BlockData data = entry.getValue();
-                WrappedBlockState state = blockDataToState.computeIfAbsent(data, SpigotConversionUtil::fromBukkitBlockData);
-                baseChunk.set(entry.getKey().getX() & 15, entry.getKey().getY() & 15, entry.getKey().getZ() & 15, state);
+            // Set block data for the chunk section
+            for (int x = 0; x < 16; x++) {
+                for (int y = 0; y < 16; y++) {
+                    for (int z = 0; z < 16; z++) {
+                        int worldY = (i << 4) + y + minHeight;
+                        BlockifyPosition position = new BlockifyPosition(x + (chunk.x() << 4), worldY, z + (chunk.z() << 4));
+
+                        if (blockData.containsKey(position)) {
+                            BlockData data = blockData.get(position);
+                            WrappedBlockState state = blockDataToState.computeIfAbsent(data, SpigotConversionUtil::fromBukkitBlockData);
+                            baseChunk.set(x, y, z, state);
+                        } else if (worldY >= minHeight && worldY < maxHeight) {
+                            BlockData defaultData = chunkSnapshot.getBlockData(x, worldY, z);
+                            WrappedBlockState defaultState = SpigotConversionUtil.fromBukkitBlockData(defaultData);
+                            baseChunk.set(x, y, z, defaultState);
+                        }
+                    }
+                }
             }
 
-            // Set biome data for the chunk section
+        // Set biome data for the chunk section
             for (int j = 0; j < 4; j++) {
                 for (int k = 0; k < 4; k++) {
                     for (int l = 0; l < 4; l++) {
@@ -247,29 +267,26 @@ public class BlockChangeManager {
                 }
             }
 
-            if (baseChunk.isEmpty()) {
-                chunks.add(null);
-            } else {
-                chunks.add(baseChunk);
-            }
+            chunks.add(baseChunk);
         }
-        Column column = new Column(chunk.x(), chunk.z(), false, chunks.toArray(new BaseChunk[0]), null);
+        // TODO: Implement Tile Entities
+        Column column = new Column(chunk.x(), chunk.z(), true, chunks.toArray(new BaseChunk[0]), null);
         LightData lightData = new LightData();
-        byte[][] emptyLightArray = new byte[y][0];
+        byte[][] emptyLightArray = new byte[ySections][0];
         BitSet emptyBitSet = new BitSet();
         BitSet lightBitSet = new BitSet();
-        for (int i = 0; i < y; i++) {
+        for (int i = 0; i < ySections; i++) {
             emptyBitSet.set(i, true);
         }
         lightData.setBlockLightArray(emptyLightArray);
         lightData.setSkyLightArray(emptyLightArray);
-        lightData.setBlockLightCount(y);
-        lightData.setSkyLightCount(y);
+        lightData.setBlockLightCount(ySections);
+        lightData.setSkyLightCount(ySections);
         lightData.setBlockLightMask(lightBitSet);
         lightData.setSkyLightMask(lightBitSet);
         lightData.setEmptyBlockLightMask(emptyBitSet);
         lightData.setEmptySkyLightMask(emptyBitSet);
-        WrapperPlayServerChunkData chunkData = new WrapperPlayServerChunkData(column, lightData, true);
+        WrapperPlayServerChunkData chunkData = new WrapperPlayServerChunkData(column, lightData);
         packetUser.sendPacketSilently(chunkData);
     }
 }
