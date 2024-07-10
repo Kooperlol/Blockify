@@ -38,7 +38,7 @@ public class BlockPlaceAdapter extends SimplePacketListenerAbstract {
                 for (View view : stage.getViews()) {
                     if (view.hasBlock(position)) {
                         // Call the event and cancel the placement
-                        Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new BlockifyPlaceEvent(player, position.toPosition(), view, stage).callEvent());
+                        Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new BlockifyPlaceEvent(player, position, view, stage).callEvent());
                         event.setCancelled(true);
                         return;
                     }
