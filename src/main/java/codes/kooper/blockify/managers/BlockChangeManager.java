@@ -272,18 +272,21 @@ public class BlockChangeManager {
         // TODO: Implement Tile Entities
         Column column = new Column(chunk.x(), chunk.z(), true, chunks.toArray(new BaseChunk[0]), null);
         LightData lightData = new LightData();
-        byte[][] emptyLightArray = new byte[ySections][0];
-        BitSet emptyBitSet = new BitSet();
-        BitSet lightBitSet = new BitSet();
+        byte[][] fullLightArray = new byte[ySections][2048];
         for (int i = 0; i < ySections; i++) {
-            emptyBitSet.set(i, true);
+            Arrays.fill(fullLightArray[i], (byte) 0xFF);
         }
-        lightData.setBlockLightArray(emptyLightArray);
-        lightData.setSkyLightArray(emptyLightArray);
+        BitSet fullBitSet = new BitSet();
+        BitSet emptyBitSet = new BitSet();
+        for (int i = 0; i < ySections; i++) {
+            fullBitSet.set(i, true);
+        }
+        lightData.setBlockLightArray(fullLightArray);
+        lightData.setSkyLightArray(fullLightArray);
         lightData.setBlockLightCount(ySections);
         lightData.setSkyLightCount(ySections);
-        lightData.setBlockLightMask(lightBitSet);
-        lightData.setSkyLightMask(lightBitSet);
+        lightData.setBlockLightMask(fullBitSet);
+        lightData.setSkyLightMask(fullBitSet);
         lightData.setEmptyBlockLightMask(emptyBitSet);
         lightData.setEmptySkyLightMask(emptyBitSet);
         WrapperPlayServerChunkData chunkData = new WrapperPlayServerChunkData(column, lightData);
