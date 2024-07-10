@@ -2,7 +2,6 @@ package codes.kooper.blockify.protocol;
 
 import codes.kooper.blockify.Blockify;
 import codes.kooper.blockify.models.Stage;
-import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyChunk;
 import com.github.retrooper.packetevents.event.SimplePacketListenerAbstract;
 import com.github.retrooper.packetevents.event.simple.PacketPlaySendEvent;
@@ -37,17 +36,14 @@ public class ChunkLoadAdapter extends SimplePacketListenerAbstract {
                 // If the chunk is not in the world, return.
                 if (!stage.getWorld().equals(player.getWorld())) return;
 
-                for (View view : stage.getViews()) {
-
-                    // Check if the view has any blocks in the bound in the first place
-                    if (!view.hasChunk(chunkX, chunkZ)) return;
+                if (stage.getChunks().contains(new BlockifyChunk(chunkX, chunkZ))) {
                     BlockifyChunk blockifyChunk = new BlockifyChunk(chunkX, chunkZ);
 
                     // Cancel the packet to prevent the player from seeing the chunk
                     event.setCancelled(true);
 
                     // Send the chunk packet to the player
-                    Bukkit.getServer().getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> Blockify.getInstance().getBlockChangeManager().sendChunkPacket(player, blockifyChunk, view.getBlocks()));
+                    Bukkit.getServer().getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> Blockify.getInstance().getBlockChangeManager().sendChunkPacket(stage, player, blockifyChunk, false));
                 }
             }
         }

@@ -63,8 +63,8 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
                                 blockifyBreakEvent.callEvent();
                                 // If block is not cancelled, break the block, otherwise, revert the block
                                 if (!blockifyBreakEvent.isCancelled()) {
-                                    Blockify.getInstance().getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position, Material.AIR.createBlockData());
                                     view.setBlock(position, Material.AIR.createBlockData());
+                                    Blockify.getInstance().getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position);
                                 } else {
                                     player.sendBlockChange(position.toLocation(player.getWorld()), blockData);
                                 }
