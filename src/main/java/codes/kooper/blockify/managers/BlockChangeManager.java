@@ -8,13 +8,18 @@ import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyChunk;
 import codes.kooper.blockify.types.BlockifyPosition;
 import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.netty.channel.ChannelHelper;
 import com.github.retrooper.packetevents.protocol.player.User;
+import com.github.retrooper.packetevents.protocol.world.chunk.BaseChunk;
+import com.github.retrooper.packetevents.protocol.world.chunk.Column;
+import com.github.retrooper.packetevents.protocol.world.chunk.LightData;
+import com.github.retrooper.packetevents.protocol.world.chunk.impl.v_1_18.Chunk_v1_18;
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
-import com.github.retrooper.packetevents.util.Vector3i;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerMultiBlockChange;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChunkData;
+import io.github.retrooper.packetevents.util.SpigotConversionUtil;
 import lombok.Getter;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.ChunkSnapshot;
 import org.bukkit.Location;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
@@ -204,7 +209,7 @@ public class BlockChangeManager {
                     if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) return;
 
                     // Send the chunk packet to the player
-                    Bukkit.getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
+                    Bukkit.getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> sendChunkPacket(onlinePlayer, chunk, blockChanges));
                 }
             }, 0L, 1L));
         }
@@ -214,49 +219,74 @@ public class BlockChangeManager {
      * Sends a chunk packet to the player.
      * Call Asynchronously
      *
-     * @param stage         the stage
      * @param player        the player
      * @param chunk         the chunk
      * @param blockChanges  the block changes
      */
-    public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
-        // Get the user from PacketEvents API
-        User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
+    public void sendChunkPacket(Player player, BlockifyChunk chunk, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
+        User packetUser = PacketEvents.getAPI().getPlayerManager().getUser(player);
+        ConcurrentHashMap<BlockifyPosition, BlockData> blockData = blockChanges.get(chunk);
+        int ySections = packetUser.getTotalWorldHeight() >> 4;
+        Map<BlockData, WrappedBlockState> blockDataToState = new HashMap<>();
+        List<BaseChunk> chunks = new ArrayList<>();
+        Chunk bukkitChunk = player.getWorld().getChunkAt(chunk.x(), chunk.z());
+        ChunkSnapshot chunkSnapshot = bukkitChunk.getChunkSnapshot();
+        int maxHeight = player.getWorld().getMaxHeight();
+        int minHeight = player.getWorld().getMinHeight();
 
-        // Loop through the chunks y positions
-        for (int chunkY = stage.getMinPosition().getY() >> 4; chunkY <= stage.getMaxPosition().getY() >> 4; chunkY++) {
-            // Create a list of encoded blocks for PacketEvents wrapper
-            List<WrapperPlayServerMultiBlockChange.EncodedBlock> encodedBlocks = new ArrayList<>();
+        for (int i = 0; i < ySections; i++) {
+            Chunk_v1_18 baseChunk = new Chunk_v1_18();
 
-            // Loop through the blocks to send
-            for (Map.Entry<BlockifyPosition, BlockData> entry : blockChanges.get(chunk).entrySet()) {
-                BlockifyPosition position = entry.getKey();
-                int blockY = position.getY();
+            // Set block data for the chunk section
+            for (int x = 0; x < 16; x++) {
+                for (int y = 0; y < 16; y++) {
+                    for (int z = 0; z < 16; z++) {
+                        int worldY = (i << 4) + y + minHeight;
+                        BlockifyPosition position = new BlockifyPosition(x + (chunk.x() << 4), worldY, z + (chunk.z() << 4));
 
-                // Check if the block is in the current y section
-                if (blockY >> 4 == chunkY) {
-                    BlockData blockData = entry.getValue();
-                    // Get the block data ID
-                    blockDataToId.computeIfAbsent(blockData, bd -> WrappedBlockState.getByString(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), bd.getAsString(false)).getGlobalId());
-
-                    int id = blockDataToId.get(blockData);
-                    int x = position.getX() & 0xF;
-                    int y = position.getY();
-                    int z = position.getZ() & 0xF;
-                    // Add the encoded block to the list
-                    encodedBlocks.add(new WrapperPlayServerMultiBlockChange.EncodedBlock(id, x, y, z));
+                        if (blockData.containsKey(position)) {
+                            BlockData data = blockData.get(position);
+                            WrappedBlockState state = blockDataToState.computeIfAbsent(data, SpigotConversionUtil::fromBukkitBlockData);
+                            baseChunk.set(x, y, z, state);
+                        } else if (worldY >= minHeight && worldY < maxHeight) {
+                            BlockData defaultData = chunkSnapshot.getBlockData(x, worldY, z);
+                            WrappedBlockState defaultState = SpigotConversionUtil.fromBukkitBlockData(defaultData);
+                            baseChunk.set(x, y, z, defaultState);
+                        }
+                    }
                 }
             }
 
-            // Check if there are no encoded blocks to send
-            if (encodedBlocks.isEmpty()) continue;
+        // Set biome data for the chunk section
+            for (int j = 0; j < 4; j++) {
+                for (int k = 0; k < 4; k++) {
+                    for (int l = 0; l < 4; l++) {
+                        int id = baseChunk.getBiomeData().palette.stateToId(1);
+                        baseChunk.getBiomeData().storage.set(k << 2 | l << 2 | j, id);
+                    }
+                }
+            }
 
-            // Send the packet to the player
-            WrapperPlayServerMultiBlockChange.EncodedBlock[] encodedBlocksArray = encodedBlocks.toArray(new WrapperPlayServerMultiBlockChange.EncodedBlock[0]);
-            WrapperPlayServerMultiBlockChange wrapper = new WrapperPlayServerMultiBlockChange(new Vector3i(chunk.x(), chunkY, chunk.z()), true, encodedBlocksArray);
-            if (user == null || !player.isOnline()) return;
-            ChannelHelper.runInEventLoop(user.getChannel(), () -> user.sendPacket(wrapper));
+            chunks.add(baseChunk);
         }
+        // TODO: Implement Tile Entities
+        Column column = new Column(chunk.x(), chunk.z(), true, chunks.toArray(new BaseChunk[0]), null);
+        LightData lightData = new LightData();
+        byte[][] emptyLightArray = new byte[ySections][0];
+        BitSet emptyBitSet = new BitSet();
+        BitSet lightBitSet = new BitSet();
+        for (int i = 0; i < ySections; i++) {
+            emptyBitSet.set(i, true);
+        }
+        lightData.setBlockLightArray(emptyLightArray);
+        lightData.setSkyLightArray(emptyLightArray);
+        lightData.setBlockLightCount(ySections);
+        lightData.setSkyLightCount(ySections);
+        lightData.setBlockLightMask(lightBitSet);
+        lightData.setSkyLightMask(lightBitSet);
+        lightData.setEmptyBlockLightMask(emptyBitSet);
+        lightData.setEmptySkyLightMask(emptyBitSet);
+        WrapperPlayServerChunkData chunkData = new WrapperPlayServerChunkData(column, lightData);
+        packetUser.sendPacketSilently(chunkData);
     }
-
 }

@@ -4,13 +4,7 @@ plugins {
 }
 
 group = 'codes.kooper'
-version = '1.1.6-beta'
-
-dependencies {
-    implementation 'org.projectlombok:lombok:1.18.28'
-    compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
-    compileOnly 'com.github.retrooper.packetevents:spigot:2.3.0'
-}
+version = '1.0.0-alpha'
 
 repositories {
     mavenCentral()
@@ -22,7 +16,21 @@ repositories {
         name = "sonatype"
         url = "https://oss.sonatype.org/content/groups/public/"
     }
-    maven { url 'https://repo.codemc.io/repository/maven-releases/' }
+    maven {
+        name = "codemc"
+        url "https://repo.codemc.io/repository/maven-releases/"
+    }
+    maven {
+        name = "jitpack"
+        url = 'https://jitpack.io'
+    }
+}
+
+dependencies {
+    implementation 'org.projectlombok:lombok:1.18.28'
+    compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
+    compileOnly 'com.github.retrooper:packetevents-spigot:2.4.0'
+    annotationProcessor 'org.projectlombok:lombok:1.18.28'
 }
 
 def targetJavaVersion = 17
@@ -34,13 +42,12 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
     options.annotationProcessorPath = configurations.compileClasspath
-    options.annotationProcessorPath = configurations.compileClasspath
     if (targetJavaVersion >= 10 || JavaVersion.current().isJava10Compatible()) {
-        options.release = targetJavaVersion
+        options.release.set(targetJavaVersion)
     }
 }
 
-tasks.withType(JavaCompile) {
+tasks.withType(JavaCompile).configureEach {
     options.deprecation = true
     options.compilerArgs += '-Xlint:deprecation'
 }
