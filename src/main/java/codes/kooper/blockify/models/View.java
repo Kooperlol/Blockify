@@ -100,6 +100,13 @@ public class View {
     }
 
     /**
+     * Remove all blocks from the view.
+     */
+    public void removeAllBlocks() {
+        blocks.clear();
+    }
+
+    /**
      * Add a block to the view.
      *
      * @param position The block to add.
