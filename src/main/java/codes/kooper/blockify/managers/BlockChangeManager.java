@@ -309,7 +309,11 @@ public class BlockChangeManager {
         for (View view : stage.getViews()) {
             for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : view.getBlocks().entrySet()) {
                 if (!chunks.contains(entry.getKey())) continue;
-                blockChanges.put(entry.getKey(), entry.getValue());
+                if (blockChanges.containsKey(entry.getKey())) {
+                    blockChanges.get(entry.getKey()).putAll(entry.getValue());
+                } else {
+                    blockChanges.put(entry.getKey(), new ConcurrentHashMap<>(entry.getValue()));
+                }
             }
         }
         return blockChanges;

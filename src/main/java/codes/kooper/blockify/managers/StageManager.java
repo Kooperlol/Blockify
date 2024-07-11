@@ -5,6 +5,7 @@ import codes.kooper.blockify.events.CreateStageEvent;
 import codes.kooper.blockify.events.DeleteStageEvent;
 import codes.kooper.blockify.models.Stage;
 import lombok.Getter;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -29,7 +30,7 @@ public class StageManager {
             Blockify.getInstance().getLogger().warning("Stage with name " + stage.getName() + " already exists!");
             return;
         }
-        new CreateStageEvent(stage).callEvent();
+        Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new CreateStageEvent(stage).callEvent());
         stages.put(stage.getName(), stage);
     }
 
