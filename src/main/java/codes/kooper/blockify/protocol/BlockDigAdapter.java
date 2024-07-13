@@ -42,8 +42,7 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
             // Find the block in any stage and view using streams
             stages.stream()
                     .flatMap(stage -> stage.getViews().stream())
-                    .filter(view -> view.hasBlock(position))
-                    .findFirst()
+                    .filter(view -> view.hasBlock(position)).min((view1, view2) -> Integer.compare(view2.getZIndex(), view1.getZIndex()))
                     .ifPresent(view -> {
                         // Get block data from view
                         BlockData blockData = view.getBlock(position);
@@ -70,7 +69,6 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
 
                                 // If block is not cancelled, break the block, otherwise, revert the block
                                 if (blockifyBreakEvent.isCancelled()) {
-                                    System.out.println("block break event is cancelled");
                                     player.sendBlockChange(position.toLocation(player.getWorld()), blockData);
                                     view.setBlock(position, blockData);
                                 }
