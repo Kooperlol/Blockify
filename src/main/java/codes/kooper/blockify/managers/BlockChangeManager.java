@@ -306,36 +306,43 @@ public class BlockChangeManager {
 
     private ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> getBlockChanges(Stage stage, Collection<BlockifyChunk> chunks) {
         ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = new ConcurrentHashMap<>();
-        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, Integer>> highestZIndexes = new ConcurrentHashMap<>();
 
         for (View view : stage.getViews()) {
-            int zIndex = view.getZIndex();
+            int currentZIndex = view.getZIndex();
+
             for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : view.getBlocks().entrySet()) {
-                BlockifyChunk chunk = entry.getKey();
-                if (!chunks.contains(chunk)) continue;
+                if (!chunks.contains(entry.getKey())) continue;
 
-                highestZIndexes.computeIfAbsent(chunk, k -> new ConcurrentHashMap<>());
+                ConcurrentHashMap<BlockifyPosition, BlockData> existingChunkChanges = blockChanges.get(entry.getKey());
+                if (existingChunkChanges == null) {
+                    blockChanges.put(entry.getKey(), new ConcurrentHashMap<>(entry.getValue()));
+                } else {
+                    for (Map.Entry<BlockifyPosition, BlockData> blockEntry : entry.getValue().entrySet()) {
+                        BlockifyPosition position = blockEntry.getKey();
+                        BlockData newData = blockEntry.getValue();
 
-                for (Map.Entry<BlockifyPosition, BlockData> positionEntry : entry.getValue().entrySet()) {
-                    BlockifyPosition position = positionEntry.getKey();
-                    BlockData blockData = positionEntry.getValue();
-
-                    highestZIndexes.get(chunk).compute(position, (key, currentMaxZIndex) -> {
-                        if (currentMaxZIndex == null || zIndex > currentMaxZIndex) {
-                            // This view has a higher Z-index, so update the block data
-                            blockChanges.computeIfAbsent(chunk, k -> new ConcurrentHashMap<>()).put(position, blockData);
-                            return zIndex;
-                        } else if (zIndex == currentMaxZIndex) {
-                            // Z-index is the same, merge the blocks
-                            blockChanges.get(chunk).put(position, blockData);
-                            return currentMaxZIndex;
+                        if (existingChunkChanges.containsKey(position)) {
+                            View existingView = findViewByPosition(stage, entry.getKey(), position);
+                            if (existingView != null && existingView.getZIndex() < currentZIndex) {
+                                existingChunkChanges.put(position, newData);
+                            }
+                        } else {
+                            existingChunkChanges.put(position, newData);
                         }
-                        // This view has a lower Z-index, do nothing
-                        return currentMaxZIndex;
-                    });
+                    }
                 }
             }
         }
         return blockChanges;
+    }
+
+    private View findViewByPosition(Stage stage, BlockifyChunk chunk, BlockifyPosition position) {
+        for (View view : stage.getViews()) {
+            ConcurrentHashMap<BlockifyPosition, BlockData> blocks = view.getBlocks().get(chunk);
+            if (blocks != null && blocks.containsKey(position)) {
+                return view;
+            }
+        }
+        return null;
     }
 }
