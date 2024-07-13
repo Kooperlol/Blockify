@@ -39,10 +39,12 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
 
             BlockifyPosition position = new BlockifyPosition(wrapper.getBlockPosition().getX(), wrapper.getBlockPosition().getY(), wrapper.getBlockPosition().getZ());
 
-            // Loop through all stages and views to find the block
-            for (Stage stage : stages) {
-                for (View view : stage.getViews()) {
-                    if (view.hasBlock(position)) {
+            // Find the block in any stage and view using streams
+            stages.stream()
+                    .flatMap(stage -> stage.getViews().stream())
+                    .filter(view -> view.hasBlock(position))
+                    .findFirst()
+                    .ifPresent(view -> {
                         // Get block data from view
                         BlockData blockData = view.getBlock(position);
 
@@ -58,24 +60,23 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
                         // Block break functionality
                         if (actionType == DiggingAction.FINISHED_DIGGING || canInstantBreak(player, blockData)) {
                             Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> {
-                                // Set block to air
-                                view.setBlock(position, Material.AIR.createBlockData());
-                                Blockify.getInstance().getBlockChangeManager().sendBlockChange(view.getStage(), view.getStage().getAudience(), position);
                                 // Call BlockifyBreakEvent
                                 BlockifyBreakEvent blockifyBreakEvent = new BlockifyBreakEvent(player, position, blockData, view, view.getStage());
                                 blockifyBreakEvent.callEvent();
+
+                                // Set to air
+                                player.sendBlockChange(position.toLocation(player.getWorld()), Material.AIR.createBlockData());
+                                view.setBlock(position, Material.AIR.createBlockData());
+
                                 // If block is not cancelled, break the block, otherwise, revert the block
                                 if (blockifyBreakEvent.isCancelled()) {
+                                    System.out.println("block break event is cancelled");
                                     player.sendBlockChange(position.toLocation(player.getWorld()), blockData);
                                     view.setBlock(position, blockData);
                                 }
                             });
                         }
-
-                        return;
-                    }
-                }
-            }
+                    });
         }
     }
 

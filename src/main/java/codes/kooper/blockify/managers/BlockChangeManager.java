@@ -148,7 +148,7 @@ public class BlockChangeManager {
         if (blockCount < 3000) {
             Map<Position, BlockData> multiBlockChange = new HashMap<>();
             for (BlockifyChunk chunk : chunks) {
-                if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) continue;
+                if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z()) || !blockChanges.containsKey(chunk)) continue;
                 for (Map.Entry<BlockifyPosition, BlockData> entry : blockChanges.get(chunk).entrySet()) {
                     multiBlockChange.put(entry.getKey().toPosition(), entry.getValue());
                 }
