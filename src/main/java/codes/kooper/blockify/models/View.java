@@ -15,6 +15,7 @@ public class View {
     private final ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks;
     private final Stage stage;
     private final String name;
+    private int zIndex;
     private boolean breakable, placeable;
     private Pattern pattern;
 
@@ -32,6 +33,7 @@ public class View {
         this.stage = stage;
         this.breakable = breakable;
         this.pattern = pattern;
+        this.zIndex = 0;
     }
 
     /**
@@ -97,6 +99,13 @@ public class View {
         for (BlockifyPosition position : positions) {
             removeBlock(position);
         }
+    }
+
+    /**
+     * Remove all blocks from the view.
+     */
+    public void removeAllBlocks() {
+        blocks.clear();
     }
 
     /**

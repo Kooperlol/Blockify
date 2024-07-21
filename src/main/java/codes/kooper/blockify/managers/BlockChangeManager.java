@@ -8,13 +8,19 @@ import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyChunk;
 import codes.kooper.blockify.types.BlockifyPosition;
 import com.github.retrooper.packetevents.PacketEvents;
-import com.github.retrooper.packetevents.netty.channel.ChannelHelper;
 import com.github.retrooper.packetevents.protocol.player.User;
+import com.github.retrooper.packetevents.protocol.world.chunk.BaseChunk;
+import com.github.retrooper.packetevents.protocol.world.chunk.Column;
+import com.github.retrooper.packetevents.protocol.world.chunk.LightData;
+import com.github.retrooper.packetevents.protocol.world.chunk.impl.v_1_18.Chunk_v1_18;
 import com.github.retrooper.packetevents.protocol.world.states.WrappedBlockState;
-import com.github.retrooper.packetevents.util.Vector3i;
-import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerMultiBlockChange;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerChunkData;
+import io.github.retrooper.packetevents.util.SpigotConversionUtil;
+import io.papermc.paper.math.Position;
 import lombok.Getter;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.ChunkSnapshot;
 import org.bukkit.Location;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.Player;
@@ -56,14 +62,7 @@ public class BlockChangeManager {
      */
     public void sendView(Player player, View view) {
         Audience audience = Audience.fromPlayers(new HashSet<>(Collections.singletonList(player)));
-        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks = new ConcurrentHashMap<>();
-        for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : view.getBlocks().entrySet()) {
-            if (!blocks.containsKey(entry.getKey())) {
-                blocks.put(entry.getKey(), new ConcurrentHashMap<>());
-            }
-            blocks.get(entry.getKey()).putAll(entry.getValue());
-        }
-        sendBlockChanges(view.getStage(), audience, blocks);
+        sendBlockChanges(view.getStage(), audience, view.getBlocks().keySet());
     }
 
     /**
@@ -75,16 +74,7 @@ public class BlockChangeManager {
      */
     public void hideView(Player player, View view) {
         Audience audience = Audience.fromPlayers(new HashSet<>(Collections.singletonList(player)));
-        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks = new ConcurrentHashMap<>();
-        for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : view.getBlocks().entrySet()) {
-            if (!blocks.containsKey(entry.getKey())) {
-                blocks.put(entry.getKey(), new ConcurrentHashMap<>());
-            }
-            for (Map.Entry<BlockifyPosition, BlockData> blockEntry : entry.getValue().entrySet()) {
-                blocks.get(entry.getKey()).put(blockEntry.getKey(), view.getStage().getWorld().getBlockData(blockEntry.getKey().getX(), blockEntry.getKey().getY(), blockEntry.getKey().getZ()));
-            }
-        }
-        sendBlockChanges(view.getStage(), audience, blocks);
+        sendBlockChanges(view.getStage(), audience, view.getBlocks().keySet(), true);
     }
 
     /**
@@ -106,14 +96,10 @@ public class BlockChangeManager {
      * @param stage     the stage
      * @param audience  the audience
      * @param position  the position
-     * @param blockData the block data
      */
-    public void sendBlockChange(Stage stage, Audience audience, BlockifyPosition position, BlockData blockData) {
-        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = new ConcurrentHashMap<>();
+    public void sendBlockChange(Stage stage, Audience audience, BlockifyPosition position) {
         BlockifyChunk chunk = new BlockifyChunk(position.getX() >> 4, position.getZ() >> 4);
-        blockChanges.put(chunk, new ConcurrentHashMap<>());
-        blockChanges.get(chunk).put(position, blockData);
-        sendBlockChanges(stage, audience, blockChanges);
+        sendBlockChanges(stage, audience, Collections.singleton(chunk));
     }
 
     /**
@@ -122,12 +108,23 @@ public class BlockChangeManager {
      *
      * @param stage        the stage
      * @param audience     the audience
-     * @param blockChanges the block changes
+     * @param chunks       the chunks to send
      */
-    public void sendBlockChanges(Stage stage, Audience audience, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
-        if (blockChanges.isEmpty()) {
-            return;
-        }
+    public void sendBlockChanges(Stage stage, Audience audience, Collection<BlockifyChunk> chunks) {
+        sendBlockChanges(stage, audience, chunks, false);
+    }
+
+    /**
+     * Sends block changes to the audience.
+     * Call Asynchronously
+     *
+     * @param stage        the stage
+     * @param audience     the audience
+     * @param chunks       the chunks to send
+     * @param unload        whether to unload the chunks
+     */
+    public void sendBlockChanges(Stage stage, Audience audience, Collection<BlockifyChunk> chunks, boolean unload) {
+        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = getBlockChanges(stage, chunks);
         Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new OnBlockChangeSendEvent(stage, blockChanges).callEvent());
 
         // If there is only one block change, send it to the player directly
@@ -147,6 +144,21 @@ public class BlockChangeManager {
             return;
         }
 
+        // Less than 3,000 blocks then use the player.sendBlockChanges method
+        if (blockCount < 3000) {
+            Map<Position, BlockData> multiBlockChange = new HashMap<>();
+            for (BlockifyChunk chunk : chunks) {
+                if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z()) || !blockChanges.containsKey(chunk)) continue;
+                for (Map.Entry<BlockifyPosition, BlockData> entry : blockChanges.get(chunk).entrySet()) {
+                    multiBlockChange.put(entry.getKey().toPosition(), entry.getValue());
+                }
+            }
+            for (Player player : audience.getOnlinePlayers()) {
+                player.sendMultiBlockChange(multiBlockChange);
+            }
+            return;
+        }
+
         // Send multiple block changes to the players
         for (Player onlinePlayer : audience.getOnlinePlayers()) {
             Location playerLocation = onlinePlayer.getLocation();
@@ -155,7 +167,7 @@ public class BlockChangeManager {
             // The chunk index is used to keep track of the current chunk being sent
             AtomicInteger chunkIndex = new AtomicInteger(0);
             // Create an array of chunks to send from the block changes map
-            List<BlockifyChunk> chunksToSend = new ArrayList<>(List.of(blockChanges.keySet().toArray(new BlockifyChunk[0])));
+            List<BlockifyChunk> chunksToSend = new ArrayList<>(chunks.stream().toList());
             chunksToSend.sort((chunk1, chunk2) -> {
                 // Get distance from chunks to player
                 int x = playerLocation.getBlockX() / 16;
@@ -201,10 +213,10 @@ public class BlockChangeManager {
                     chunkIndex.getAndIncrement();
 
                     // Check if the chunk is loaded; if not, return
-                    if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) return;
+                    if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z())) continue;
 
                     // Send the chunk packet to the player
-                    Bukkit.getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> sendChunkPacket(stage, onlinePlayer, chunk, blockChanges));
+                    Bukkit.getScheduler().runTaskAsynchronously(Blockify.getInstance(), () -> sendChunkPacket(stage, onlinePlayer, chunk, unload));
                 }
             }, 0L, 1L));
         }
@@ -217,46 +229,113 @@ public class BlockChangeManager {
      * @param stage         the stage
      * @param player        the player
      * @param chunk         the chunk
-     * @param blockChanges  the block changes
      */
-    public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges) {
-        // Get the user from PacketEvents API
-        User user = PacketEvents.getAPI().getPlayerManager().getUser(player);
+    public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, boolean unload) {
+        User packetUser = PacketEvents.getAPI().getPlayerManager().getUser(player);
+        int ySections = packetUser.getTotalWorldHeight() >> 4;
+        ConcurrentHashMap<BlockifyPosition, BlockData> blockData = null;
+        if (!unload) {
+            ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = getBlockChanges(stage, Collections.singleton(chunk));
+            blockData = blockChanges.get(chunk);
+        }
+        Map<BlockData, WrappedBlockState> blockDataToState = new HashMap<>();
+        List<BaseChunk> chunks = new ArrayList<>();
+        Chunk bukkitChunk = player.getWorld().getChunkAt(chunk.x(), chunk.z());
+        ChunkSnapshot chunkSnapshot = bukkitChunk.getChunkSnapshot();
+        int maxHeight = player.getWorld().getMaxHeight();
+        int minHeight = player.getWorld().getMinHeight();
 
-        // Loop through the chunks y positions
-        for (int chunkY = stage.getMinPosition().getY() >> 4; chunkY <= stage.getMaxPosition().getY() >> 4; chunkY++) {
-            // Create a list of encoded blocks for PacketEvents wrapper
-            List<WrapperPlayServerMultiBlockChange.EncodedBlock> encodedBlocks = new ArrayList<>();
+        for (int i = 0; i < ySections; i++) {
+            Chunk_v1_18 baseChunk = new Chunk_v1_18();
 
-            // Loop through the blocks to send
-            for (Map.Entry<BlockifyPosition, BlockData> entry : blockChanges.get(chunk).entrySet()) {
-                BlockifyPosition position = entry.getKey();
-                int blockY = position.getY();
+            // Set block data for the chunk section
+            for (int x = 0; x < 16; x++) {
+                for (int y = 0; y < 16; y++) {
+                    for (int z = 0; z < 16; z++) {
+                        int worldY = (i << 4) + y + minHeight;
+                        BlockifyPosition position = new BlockifyPosition(x + (chunk.x() << 4), worldY, z + (chunk.z() << 4));
 
-                // Check if the block is in the current y section
-                if (blockY >> 4 == chunkY) {
-                    BlockData blockData = entry.getValue();
-                    // Get the block data ID
-                    blockDataToId.computeIfAbsent(blockData, bd -> WrappedBlockState.getByString(PacketEvents.getAPI().getServerManager().getVersion().toClientVersion(), bd.getAsString(false)).getGlobalId());
-
-                    int id = blockDataToId.get(blockData);
-                    int x = position.getX() & 0xF;
-                    int y = position.getY();
-                    int z = position.getZ() & 0xF;
-                    // Add the encoded block to the list
-                    encodedBlocks.add(new WrapperPlayServerMultiBlockChange.EncodedBlock(id, x, y, z));
+                        if (!unload && blockData != null && blockData.containsKey(position)) {
+                            BlockData data = blockData.get(position);
+                            WrappedBlockState state = blockDataToState.computeIfAbsent(data, SpigotConversionUtil::fromBukkitBlockData);
+                            baseChunk.set(x, y, z, state);
+                        } else if (worldY >= minHeight && worldY < maxHeight) {
+                            BlockData defaultData = chunkSnapshot.getBlockData(x, worldY, z);
+                            WrappedBlockState defaultState = SpigotConversionUtil.fromBukkitBlockData(defaultData);
+                            baseChunk.set(x, y, z, defaultState);
+                        }
+                    }
                 }
             }
 
-            // Check if there are no encoded blocks to send
-            if (encodedBlocks.isEmpty()) continue;
+        // Set biome data for the chunk section
+            for (int j = 0; j < 4; j++) {
+                for (int k = 0; k < 4; k++) {
+                    for (int l = 0; l < 4; l++) {
+                        int id = baseChunk.getBiomeData().palette.stateToId(1);
+                        baseChunk.getBiomeData().storage.set(k << 2 | l << 2 | j, id);
+                    }
+                }
+            }
 
-            // Send the packet to the player
-            WrapperPlayServerMultiBlockChange.EncodedBlock[] encodedBlocksArray = encodedBlocks.toArray(new WrapperPlayServerMultiBlockChange.EncodedBlock[0]);
-            WrapperPlayServerMultiBlockChange wrapper = new WrapperPlayServerMultiBlockChange(new Vector3i(chunk.x(), chunkY, chunk.z()), true, encodedBlocksArray);
-            if (user == null || !player.isOnline()) return;
-            ChannelHelper.runInEventLoop(user.getChannel(), () -> user.sendPacket(wrapper));
+            chunks.add(baseChunk);
         }
+        // TODO: Implement Tile Entities
+        Column column = new Column(chunk.x(), chunk.z(), true, chunks.toArray(new BaseChunk[0]), null);
+        LightData lightData = new LightData();
+        byte[][] fullLightArray = new byte[ySections][2048];
+        for (int i = 0; i < ySections; i++) {
+            Arrays.fill(fullLightArray[i], (byte) 0xFF);
+        }
+        BitSet fullBitSet = new BitSet();
+        BitSet emptyBitSet = new BitSet();
+        for (int i = 0; i < ySections; i++) {
+            fullBitSet.set(i, true);
+        }
+        lightData.setBlockLightArray(fullLightArray);
+        lightData.setSkyLightArray(fullLightArray);
+        lightData.setBlockLightCount(ySections);
+        lightData.setSkyLightCount(ySections);
+        lightData.setBlockLightMask(fullBitSet);
+        lightData.setSkyLightMask(fullBitSet);
+        lightData.setEmptyBlockLightMask(emptyBitSet);
+        lightData.setEmptySkyLightMask(emptyBitSet);
+        WrapperPlayServerChunkData chunkData = new WrapperPlayServerChunkData(column, lightData);
+        packetUser.sendPacketSilently(chunkData);
     }
 
+    private ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> getBlockChanges(Stage stage, Collection<BlockifyChunk> chunks) {
+        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = new ConcurrentHashMap<>();
+        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, Integer>> highestZIndexes = new ConcurrentHashMap<>();
+
+        for (View view : stage.getViews()) {
+            int zIndex = view.getZIndex();
+            for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : view.getBlocks().entrySet()) {
+                BlockifyChunk chunk = entry.getKey();
+                if (!chunks.contains(chunk)) continue;
+
+                highestZIndexes.computeIfAbsent(chunk, k -> new ConcurrentHashMap<>());
+
+                for (Map.Entry<BlockifyPosition, BlockData> positionEntry : entry.getValue().entrySet()) {
+                    BlockifyPosition position = positionEntry.getKey();
+                    BlockData blockData = positionEntry.getValue();
+
+                    highestZIndexes.get(chunk).compute(position, (key, currentMaxZIndex) -> {
+                        if (currentMaxZIndex == null || zIndex > currentMaxZIndex) {
+                            // This view has a higher Z-index, so update the block data
+                            blockChanges.computeIfAbsent(chunk, k -> new ConcurrentHashMap<>()).put(position, blockData);
+                            return zIndex;
+                        } else if (zIndex == currentMaxZIndex) {
+                            // Z-index is the same, merge the blocks
+                            blockChanges.get(chunk).put(position, blockData);
+                            return currentMaxZIndex;
+                        }
+                        // This view has a lower Z-index, do nothing
+                        return currentMaxZIndex;
+                    });
+                }
+            }
+        }
+        return blockChanges;
+    }
 }

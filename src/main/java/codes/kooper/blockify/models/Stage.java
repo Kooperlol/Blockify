@@ -7,11 +7,10 @@ import lombok.Getter;
 import lombok.Setter;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.block.data.BlockData;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -57,11 +56,7 @@ public class Stage {
      * Send blocks to the audience. Should be called asynchronously.
      */
     public void sendBlocksToAudience() {
-        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blocks = new ConcurrentHashMap<>();
-        for (View view : views) {
-            blocks.putAll(view.getBlocks());
-        }
-        Blockify.getInstance().getBlockChangeManager().sendBlockChanges(this, audience, blocks);
+        Blockify.getInstance().getBlockChangeManager().sendBlockChanges(this, audience, getChunks());
     }
 
     /**
@@ -71,20 +66,8 @@ public class Stage {
      * @param blocks Blocks to refresh to the audience.
      */
     public void refreshBlocksToAudience(Set<BlockifyPosition> blocks) {
-        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = new ConcurrentHashMap<>();
-        for (View view : views) {
-            for (BlockifyPosition position : blocks) {
-                if (!view.hasBlock(position)) continue;
-                if (blockChanges.containsKey(position.toBlockifyChunk())) {
-                    blockChanges.get(position.toBlockifyChunk()).put(position, view.getBlock(position));
-                } else {
-                    ConcurrentHashMap<BlockifyPosition, BlockData> blockData = new ConcurrentHashMap<>();
-                    blockData.put(position, view.getBlock(position));
-                    blockChanges.put(position.toBlockifyChunk(), blockData);
-                }
-            }
-        }
-        Blockify.getInstance().getBlockChangeManager().sendBlockChanges(this, audience, blockChanges);
+        Set<BlockifyChunk> chunks = blocks.stream().map(BlockifyPosition::toBlockifyChunk).collect(Collectors.toSet());
+        Blockify.getInstance().getBlockChangeManager().sendBlockChanges(this, audience, chunks);
     }
 
     /**
