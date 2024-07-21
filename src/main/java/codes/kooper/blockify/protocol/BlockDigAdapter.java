@@ -38,6 +38,7 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
 
             // Loop through all stages and views to find the block
             for (Stage stage : stages) {
+                if (stage.getWorld() != player.getWorld()) return;
                 for (View view : stage.getViews()) {
                     if (view.hasBlock(position)) {
                         // Get block data from view
