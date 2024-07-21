@@ -29,6 +29,7 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Getter
 public class BlockChangeManager {
@@ -93,9 +94,9 @@ public class BlockChangeManager {
     /**
      * Sends a block change to the audience.
      *
-     * @param stage     the stage
-     * @param audience  the audience
-     * @param position  the position
+     * @param stage    the stage
+     * @param audience the audience
+     * @param position the position
      */
     public void sendBlockChange(Stage stage, Audience audience, BlockifyPosition position) {
         BlockifyChunk chunk = new BlockifyChunk(position.getX() >> 4, position.getZ() >> 4);
@@ -106,9 +107,9 @@ public class BlockChangeManager {
      * Sends block changes to the audience.
      * Call Asynchronously
      *
-     * @param stage        the stage
-     * @param audience     the audience
-     * @param chunks       the chunks to send
+     * @param stage    the stage
+     * @param audience the audience
+     * @param chunks   the chunks to send
      */
     public void sendBlockChanges(Stage stage, Audience audience, Collection<BlockifyChunk> chunks) {
         sendBlockChanges(stage, audience, chunks, false);
@@ -118,24 +119,24 @@ public class BlockChangeManager {
      * Sends block changes to the audience.
      * Call Asynchronously
      *
-     * @param stage        the stage
-     * @param audience     the audience
-     * @param chunks       the chunks to send
-     * @param unload        whether to unload the chunks
+     * @param stage    the stage
+     * @param audience the audience
+     * @param chunks   the chunks to send
+     * @param unload   whether to unload the chunks
      */
     public void sendBlockChanges(Stage stage, Audience audience, Collection<BlockifyChunk> chunks, boolean unload) {
-        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = getBlockChanges(stage, chunks);
+        ConcurrentMap<BlockifyChunk, ConcurrentMap<BlockifyPosition, BlockData>> blockChanges = getBlockChanges(stage, chunks);
         Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new OnBlockChangeSendEvent(stage, blockChanges).callEvent());
 
         // If there is only one block change, send it to the player directly
         int blockCount = 0;
-        for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
+        for (Map.Entry<BlockifyChunk, ConcurrentMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
             blockCount += entry.getValue().size();
         }
         if (blockCount == 1) {
             for (Player onlinePlayer : audience.getOnlinePlayers()) {
                 if (onlinePlayer.getWorld() != stage.getWorld()) continue;
-                for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
+                for (Map.Entry<BlockifyChunk, ConcurrentMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
                     BlockifyPosition position = entry.getValue().keySet().iterator().next();
                     BlockData blockData = entry.getValue().values().iterator().next();
                     onlinePlayer.sendBlockChange(position.toLocation(stage.getWorld()), blockData);
@@ -226,16 +227,17 @@ public class BlockChangeManager {
      * Sends a chunk packet to the player.
      * Call Asynchronously
      *
-     * @param stage         the stage
-     * @param player        the player
-     * @param chunk         the chunk
+     * @param stage  the stage
+     * @param player the player
+     * @param chunk  the chunk
      */
     public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, boolean unload) {
         User packetUser = PacketEvents.getAPI().getPlayerManager().getUser(player);
+        if (packetUser == null) return;
         int ySections = packetUser.getTotalWorldHeight() >> 4;
-        ConcurrentHashMap<BlockifyPosition, BlockData> blockData = null;
+        ConcurrentMap<BlockifyPosition, BlockData> blockData = null;
         if (!unload) {
-            ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = getBlockChanges(stage, Collections.singleton(chunk));
+            ConcurrentMap<BlockifyChunk, ConcurrentMap<BlockifyPosition, BlockData>> blockChanges = getBlockChanges(stage, Collections.singleton(chunk));
             blockData = blockChanges.get(chunk);
         }
         Map<BlockData, WrappedBlockState> blockDataToState = new HashMap<>();
@@ -268,7 +270,7 @@ public class BlockChangeManager {
                 }
             }
 
-        // Set biome data for the chunk section
+            // Set biome data for the chunk section
             for (int j = 0; j < 4; j++) {
                 for (int k = 0; k < 4; k++) {
                     for (int l = 0; l < 4; l++) {
@@ -304,45 +306,46 @@ public class BlockChangeManager {
         packetUser.sendPacketSilently(chunkData);
     }
 
-    private ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> getBlockChanges(Stage stage, Collection<BlockifyChunk> chunks) {
-        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = new ConcurrentHashMap<>();
+    private ConcurrentMap<BlockifyChunk, ConcurrentMap<BlockifyPosition, BlockData>> getBlockChanges(Stage stage, Collection<BlockifyChunk> chunks) {
+        // Set for fast chunk containment checks
+        ConcurrentHashMap.KeySetView<BlockifyChunk, Boolean> chunkSet = ConcurrentHashMap.newKeySet();
+        chunkSet.addAll(chunks);
 
-        for (View view : stage.getViews()) {
-            int currentZIndex = view.getZIndex();
+        // Map to store the highest zIndex and corresponding BlockData for each BlockifyChunk and BlockifyPosition
+        ConcurrentMap<BlockifyChunk, ConcurrentMap<BlockifyPosition, AtomicReference<ZIndexBlockData>>> highestZIndexMap = new ConcurrentHashMap<>();
 
-            for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : view.getBlocks().entrySet()) {
-                if (!chunks.contains(entry.getKey())) continue;
-
-                ConcurrentHashMap<BlockifyPosition, BlockData> existingChunkChanges = blockChanges.get(entry.getKey());
-                if (existingChunkChanges == null) {
-                    blockChanges.put(entry.getKey(), new ConcurrentHashMap<>(entry.getValue()));
-                } else {
-                    for (Map.Entry<BlockifyPosition, BlockData> blockEntry : entry.getValue().entrySet()) {
-                        BlockifyPosition position = blockEntry.getKey();
-                        BlockData newData = blockEntry.getValue();
-
-                        if (existingChunkChanges.containsKey(position)) {
-                            View existingView = findViewByPosition(stage, entry.getKey(), position);
-                            if (existingView != null && existingView.getZIndex() < currentZIndex) {
-                                existingChunkChanges.put(position, newData);
-                            }
-                        } else {
-                            existingChunkChanges.put(position, newData);
-                        }
-                    }
+        // Process each view in parallel
+        stage.getViews().parallelStream().forEach(view -> {
+            int zIndex = view.getZIndex();
+            view.getBlocks().forEach((chunk, viewChunkBlocks) -> {
+                if (chunkSet.contains(chunk)) {
+                    viewChunkBlocks.forEach((position, blockData) -> {
+                        highestZIndexMap.computeIfAbsent(chunk, k -> new ConcurrentHashMap<>())
+                                .computeIfAbsent(position, k -> new AtomicReference<>(new ZIndexBlockData(zIndex, blockData)))
+                                .updateAndGet(existing -> existing.zIndex < zIndex ? new ZIndexBlockData(zIndex, blockData) : existing);
+                    });
                 }
-            }
-        }
+            });
+        });
+
+        // Convert highestZIndexMap to blockChanges
+        ConcurrentMap<BlockifyChunk, ConcurrentMap<BlockifyPosition, BlockData>> blockChanges = new ConcurrentHashMap<>();
+        highestZIndexMap.forEach((chunk, positionMap) -> {
+            ConcurrentMap<BlockifyPosition, BlockData> blockDataMap = new ConcurrentHashMap<>();
+            positionMap.forEach((position, zIndexBlockData) -> blockDataMap.put(position, zIndexBlockData.get().blockData));
+            blockChanges.put(chunk, blockDataMap);
+        });
+
         return blockChanges;
     }
 
-    private View findViewByPosition(Stage stage, BlockifyChunk chunk, BlockifyPosition position) {
-        for (View view : stage.getViews()) {
-            ConcurrentHashMap<BlockifyPosition, BlockData> blocks = view.getBlocks().get(chunk);
-            if (blocks != null && blocks.containsKey(position)) {
-                return view;
-            }
+    private static class ZIndexBlockData {
+        int zIndex;
+        BlockData blockData;
+
+        ZIndexBlockData(int zIndex, BlockData blockData) {
+            this.zIndex = zIndex;
+            this.blockData = blockData;
         }
-        return null;
     }
 }

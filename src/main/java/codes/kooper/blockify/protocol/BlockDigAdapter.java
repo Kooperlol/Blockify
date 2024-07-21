@@ -41,6 +41,7 @@ public class BlockDigAdapter extends SimplePacketListenerAbstract {
 
             // Find the block in any stage and view using streams
             stages.stream()
+                    .filter(stage -> stage.getWorld() == player.getWorld())
                     .flatMap(stage -> stage.getViews().stream())
                     .filter(view -> view.hasBlock(position)).min((view1, view2) -> Integer.compare(view2.getZIndex(), view1.getZIndex()))
                     .ifPresent(view -> {
