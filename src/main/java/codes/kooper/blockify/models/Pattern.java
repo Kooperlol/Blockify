@@ -5,12 +5,15 @@ import lombok.Setter;
 import org.bukkit.block.data.BlockData;
 
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.util.function.Predicate;
 
 @Getter
 @Setter
 public class Pattern {
-    private Map<BlockData, Double> blockDataPercentages;
+    private final NavigableMap<Double, BlockData> blockDataMap = new TreeMap<>();
+    private double totalWeight;
 
     /**
      * Creates a new Pattern with the given BlockData and their respective percentages.
@@ -35,7 +38,10 @@ public class Pattern {
             throw new IllegalArgumentException("Sum of percentages must not exceed 1.0");
         }
 
-        this.blockDataPercentages = blockDataPercentages;
+        for (Map.Entry<BlockData, Double> entry : blockDataPercentages.entrySet()) {
+            totalWeight += entry.getValue();
+            blockDataMap.put(totalWeight, entry.getKey());
+        }
     }
 
     /**
@@ -44,15 +50,7 @@ public class Pattern {
      * @return A random BlockData from the Pattern.
      */
     public BlockData getRandomBlockData() {
-        double random = Math.random();
-        double sum = 0.0;
-        for (Map.Entry<BlockData, Double> entry : blockDataPercentages.entrySet()) {
-            sum += entry.getValue();
-            if (random < sum) {
-                return entry.getKey();
-            }
-        }
-        return null;
+        double random = Math.random() * totalWeight;
+        return blockDataMap.higherEntry(random).getValue();
     }
-
 }

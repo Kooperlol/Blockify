@@ -7,6 +7,7 @@ import codes.kooper.blockify.models.Stage;
 import codes.kooper.blockify.models.View;
 import codes.kooper.blockify.types.BlockifyChunk;
 import codes.kooper.blockify.types.BlockifyPosition;
+import codes.kooper.blockify.utils.PositionKeyUtil;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.protocol.player.User;
 import com.github.retrooper.packetevents.protocol.world.chunk.BaseChunk;
@@ -34,6 +35,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class BlockChangeManager {
     private final ConcurrentHashMap<Player, BukkitTask> blockChangeTasks;
     private final ConcurrentHashMap<BlockData, Integer> blockDataToId;
+    private final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
     public BlockChangeManager() {
         this.blockChangeTasks = new ConcurrentHashMap<>();
@@ -124,21 +126,21 @@ public class BlockChangeManager {
      * @param unload        whether to unload the chunks
      */
     public void sendBlockChanges(Stage stage, Audience audience, Collection<BlockifyChunk> chunks, boolean unload) {
-        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = getBlockChanges(stage, chunks);
+        Map<BlockifyChunk, Map<Long, BlockData>> blockChanges = getBlockChanges(stage, chunks);
         Bukkit.getScheduler().runTask(Blockify.getInstance(), () -> new OnBlockChangeSendEvent(stage, blockChanges).callEvent());
 
         // If there is only one block change, send it to the player directly
         int blockCount = 0;
-        for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
+        for (Map.Entry<BlockifyChunk, Map<Long, BlockData>> entry : blockChanges.entrySet()) {
             blockCount += entry.getValue().size();
         }
         if (blockCount == 1) {
             for (Player onlinePlayer : audience.getOnlinePlayers()) {
                 if (onlinePlayer.getWorld() != stage.getWorld()) continue;
-                for (Map.Entry<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> entry : blockChanges.entrySet()) {
-                    BlockifyPosition position = entry.getValue().keySet().iterator().next();
+                for (Map.Entry<BlockifyChunk, Map<Long, BlockData>> entry : blockChanges.entrySet()) {
+                    Long position = entry.getValue().keySet().iterator().next();
                     BlockData blockData = entry.getValue().values().iterator().next();
-                    onlinePlayer.sendBlockChange(position.toLocation(stage.getWorld()), blockData);
+                    onlinePlayer.sendBlockChange(PositionKeyUtil.toBlockifyPosition(position).toLocation(onlinePlayer.getWorld()), blockData);
                 }
             }
             return;
@@ -149,8 +151,8 @@ public class BlockChangeManager {
             Map<Position, BlockData> multiBlockChange = new HashMap<>();
             for (BlockifyChunk chunk : chunks) {
                 if (!stage.getWorld().isChunkLoaded(chunk.x(), chunk.z()) || !blockChanges.containsKey(chunk)) continue;
-                for (Map.Entry<BlockifyPosition, BlockData> entry : blockChanges.get(chunk).entrySet()) {
-                    multiBlockChange.put(entry.getKey().toPosition(), entry.getValue());
+                for (Map.Entry<Long, BlockData> entry : blockChanges.get(chunk).entrySet()) {
+                    multiBlockChange.put(PositionKeyUtil.toBlockifyPosition(entry.getKey()).toPosition(), entry.getValue());
                 }
             }
             for (Player player : audience.getOnlinePlayers()) {
@@ -224,89 +226,134 @@ public class BlockChangeManager {
 
     /**
      * Sends a chunk packet to the player.
-     * Call Asynchronously
+     * This method submits the task to the thread pool for asynchronous execution.
      *
-     * @param stage         the stage
-     * @param player        the player
-     * @param chunk         the chunk
+     * @param stage  the stage
+     * @param player the player
+     * @param chunk  the chunk
+     * @param unload whether to unload the chunk
      */
     public void sendChunkPacket(Stage stage, Player player, BlockifyChunk chunk, boolean unload) {
-        User packetUser = PacketEvents.getAPI().getPlayerManager().getUser(player);
-        int ySections = packetUser.getTotalWorldHeight() >> 4;
-        ConcurrentHashMap<BlockifyPosition, BlockData> blockData = null;
-        if (!unload) {
-            ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = getBlockChanges(stage, Collections.singleton(chunk));
-            blockData = blockChanges.get(chunk);
-        }
-        Map<BlockData, WrappedBlockState> blockDataToState = new HashMap<>();
-        List<BaseChunk> chunks = new ArrayList<>();
-        Chunk bukkitChunk = player.getWorld().getChunkAt(chunk.x(), chunk.z());
-        ChunkSnapshot chunkSnapshot = bukkitChunk.getChunkSnapshot();
-        int maxHeight = player.getWorld().getMaxHeight();
-        int minHeight = player.getWorld().getMinHeight();
+        executorService.submit(() -> processAndSendChunk(stage, player, chunk, unload));
+    }
 
-        for (int i = 0; i < ySections; i++) {
-            Chunk_v1_18 baseChunk = new Chunk_v1_18();
+    /**
+     * Processes the chunk and sends the packet to the player.
+     *
+     * @param stage  the stage
+     * @param player the player
+     * @param chunk  the chunk
+     * @param unload whether to unload the chunk
+     */
+    private void processAndSendChunk(Stage stage, Player player, BlockifyChunk chunk, boolean unload) {
+        try {
+            User packetUser = PacketEvents.getAPI().getPlayerManager().getUser(player);
+            int ySections = packetUser.getTotalWorldHeight() >> 4;
+            Map<Long, BlockData> blockData = null;
 
-            // Set block data for the chunk section
-            for (int x = 0; x < 16; x++) {
-                for (int y = 0; y < 16; y++) {
-                    for (int z = 0; z < 16; z++) {
-                        int worldY = (i << 4) + y + minHeight;
-                        BlockifyPosition position = new BlockifyPosition(x + (chunk.x() << 4), worldY, z + (chunk.z() << 4));
+            if (!unload) {
+                Map<BlockifyChunk, Map<Long, BlockData>> blockChanges = getBlockChanges(stage, Collections.singleton(chunk));
+                blockData = blockChanges.get(chunk);
+            }
 
-                        if (!unload && blockData != null && blockData.containsKey(position)) {
-                            BlockData data = blockData.get(position);
-                            WrappedBlockState state = blockDataToState.computeIfAbsent(data, SpigotConversionUtil::fromBukkitBlockData);
-                            baseChunk.set(x, y, z, state);
-                        } else if (worldY >= minHeight && worldY < maxHeight) {
-                            BlockData defaultData = chunkSnapshot.getBlockData(x, worldY, z);
-                            WrappedBlockState defaultState = SpigotConversionUtil.fromBukkitBlockData(defaultData);
-                            baseChunk.set(x, y, z, defaultState);
+            Map<BlockData, WrappedBlockState> blockDataToState = new HashMap<>();
+            List<BaseChunk> chunks = new ArrayList<>(ySections);
+            Chunk bukkitChunk = player.getWorld().getChunkAt(chunk.x(), chunk.z());
+            ChunkSnapshot chunkSnapshot = bukkitChunk.getChunkSnapshot();
+            int maxHeight = player.getWorld().getMaxHeight();
+            int minHeight = player.getWorld().getMinHeight();
+
+            // Pre-fetch default block data for the entire chunk to reduce calls to getBlockData()
+            BlockData[][][][] defaultBlockData = new BlockData[ySections][16][16][16];
+            for (int section = 0; section < ySections; section++) {
+                int baseY = (section << 4) + minHeight;
+                for (int x = 0; x < 16; x++) {
+                    for (int y = 0; y < 16; y++) {
+                        int worldY = baseY + y;
+                        if (worldY >= minHeight && worldY < maxHeight) {
+                            for (int z = 0; z < 16; z++) {
+                                defaultBlockData[section][x][y][z] = chunkSnapshot.getBlockData(x, worldY, z);
+                            }
                         }
                     }
                 }
             }
 
-        // Set biome data for the chunk section
-            for (int j = 0; j < 4; j++) {
-                for (int k = 0; k < 4; k++) {
-                    for (int l = 0; l < 4; l++) {
-                        int id = baseChunk.getBiomeData().palette.stateToId(1);
-                        baseChunk.getBiomeData().storage.set(k << 2 | l << 2 | j, id);
+            // Predefined full light array and bitsets to avoid recreating them for each chunk
+            byte[] fullLightSection = new byte[2048];
+            Arrays.fill(fullLightSection, (byte) 0xFF);
+            byte[][] fullLightArray = new byte[ySections][];
+            BitSet fullBitSet = new BitSet(ySections);
+            for (int i = 0; i < ySections; i++) {
+                fullLightArray[i] = fullLightSection;
+                fullBitSet.set(i);
+            }
+            BitSet emptyBitSet = new BitSet(ySections);
+
+            // Process each chunk section
+            for (int section = 0; section < ySections; section++) {
+                Chunk_v1_18 baseChunk = new Chunk_v1_18();
+
+                // Use primitive long keys for block positions to reduce object creation
+                long baseY = (section << 4) + minHeight;
+                for (int x = 0; x < 16; x++) {
+                    for (int y = 0; y < 16; y++) {
+                        long worldY = baseY + y;
+                        if (worldY >= minHeight && worldY < maxHeight) {
+                            for (int z = 0; z < 16; z++) {
+                                long positionKey = (((x + ((long) chunk.x() << 4)) & 0x3FFFFFF) << 38)
+                                        | ((worldY & 0xFFF) << 26)
+                                        | ((z + ((long) chunk.z() << 4)) & 0x3FFFFFF);
+                                BlockData data = null;
+
+                                if (!unload && blockData != null) {
+                                    data = blockData.get(positionKey);
+                                }
+
+                                if (data == null) {
+                                    data = defaultBlockData[section][x][y][z];
+                                }
+
+                                WrappedBlockState state = blockDataToState.computeIfAbsent(data, SpigotConversionUtil::fromBukkitBlockData);
+                                baseChunk.set(x, y, z, state);
+                            }
+                        }
                     }
                 }
+
+                // Set biome data for the chunk section
+                int biomeId = baseChunk.getBiomeData().palette.stateToId(1);
+                int storageSize = baseChunk.getBiomeData().storage.getData().length;
+                for (int index = 0; index < storageSize; index++) {
+                    baseChunk.getBiomeData().storage.set(index, biomeId);
+                }
+
+                chunks.add(baseChunk);
             }
 
-            chunks.add(baseChunk);
+            // Reuse pre-created light data
+            LightData lightData = new LightData();
+            lightData.setBlockLightArray(fullLightArray);
+            lightData.setSkyLightArray(fullLightArray);
+            lightData.setBlockLightCount(ySections);
+            lightData.setSkyLightCount(ySections);
+            lightData.setBlockLightMask(fullBitSet);
+            lightData.setSkyLightMask(fullBitSet);
+            lightData.setEmptyBlockLightMask(emptyBitSet);
+            lightData.setEmptySkyLightMask(emptyBitSet);
+
+            Column column = new Column(chunk.x(), chunk.z(), true, chunks.toArray(new BaseChunk[0]), null);
+            WrapperPlayServerChunkData chunkData = new WrapperPlayServerChunkData(column, lightData);
+            packetUser.sendPacketSilently(chunkData);
+        } catch (Exception e) {
+            // Handle exceptions appropriately, possibly logging them
+            e.printStackTrace();
         }
-        // TODO: Implement Tile Entities
-        Column column = new Column(chunk.x(), chunk.z(), true, chunks.toArray(new BaseChunk[0]), null);
-        LightData lightData = new LightData();
-        byte[][] fullLightArray = new byte[ySections][2048];
-        for (int i = 0; i < ySections; i++) {
-            Arrays.fill(fullLightArray[i], (byte) 0xFF);
-        }
-        BitSet fullBitSet = new BitSet();
-        BitSet emptyBitSet = new BitSet();
-        for (int i = 0; i < ySections; i++) {
-            fullBitSet.set(i, true);
-        }
-        lightData.setBlockLightArray(fullLightArray);
-        lightData.setSkyLightArray(fullLightArray);
-        lightData.setBlockLightCount(ySections);
-        lightData.setSkyLightCount(ySections);
-        lightData.setBlockLightMask(fullBitSet);
-        lightData.setSkyLightMask(fullBitSet);
-        lightData.setEmptyBlockLightMask(emptyBitSet);
-        lightData.setEmptySkyLightMask(emptyBitSet);
-        WrapperPlayServerChunkData chunkData = new WrapperPlayServerChunkData(column, lightData);
-        packetUser.sendPacketSilently(chunkData);
     }
 
-    private ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> getBlockChanges(Stage stage, Collection<BlockifyChunk> chunks) {
-        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, BlockData>> blockChanges = new ConcurrentHashMap<>();
-        ConcurrentHashMap<BlockifyChunk, ConcurrentHashMap<BlockifyPosition, Integer>> highestZIndexes = new ConcurrentHashMap<>();
+    private Map<BlockifyChunk, Map<Long, BlockData>> getBlockChanges(Stage stage, Collection<BlockifyChunk> chunks) {
+        Map<BlockifyChunk, Map<Long, BlockData>> blockChanges = new HashMap<>();
+        Map<BlockifyChunk, Map<Long, Integer>> highestZIndexes = new HashMap<>();
 
         for (View view : stage.getViews()) {
             int zIndex = view.getZIndex();
@@ -314,28 +361,43 @@ public class BlockChangeManager {
                 BlockifyChunk chunk = entry.getKey();
                 if (!chunks.contains(chunk)) continue;
 
-                highestZIndexes.computeIfAbsent(chunk, k -> new ConcurrentHashMap<>());
+                highestZIndexes.computeIfAbsent(chunk, k -> new HashMap<>());
+                Map<Long, Integer> chunkZIndexes = highestZIndexes.get(chunk);
+                Map<Long, BlockData> chunkBlockChanges = blockChanges.computeIfAbsent(chunk, k -> new HashMap<>());
 
                 for (Map.Entry<BlockifyPosition, BlockData> positionEntry : entry.getValue().entrySet()) {
-                    BlockifyPosition position = positionEntry.getKey();
+                    BlockifyPosition positionKey = positionEntry.getKey();
                     BlockData blockData = positionEntry.getValue();
 
-                    highestZIndexes.get(chunk).compute(position, (key, currentMaxZIndex) -> {
+                    chunkZIndexes.compute(PositionKeyUtil.getPositionKey(positionKey.getX(), positionKey.getY(), positionKey.getZ()), (key, currentMaxZIndex) -> {
                         if (currentMaxZIndex == null || zIndex > currentMaxZIndex) {
-                            // This view has a higher Z-index, so update the block data
-                            blockChanges.computeIfAbsent(chunk, k -> new ConcurrentHashMap<>()).put(position, blockData);
+                            chunkBlockChanges.put(PositionKeyUtil.getPositionKey(positionKey.getX(), positionKey.getY(), positionKey.getZ()), blockData);
                             return zIndex;
                         } else if (zIndex == currentMaxZIndex) {
-                            // Z-index is the same, merge the blocks
-                            blockChanges.get(chunk).put(position, blockData);
-                            return currentMaxZIndex;
+                            chunkBlockChanges.put(PositionKeyUtil.getPositionKey(positionKey.getX(), positionKey.getY(), positionKey.getZ()), blockData);
                         }
-                        // This view has a lower Z-index, do nothing
                         return currentMaxZIndex;
                     });
                 }
             }
         }
         return blockChanges;
+    }
+
+    /**
+     * Shutdown the executor service gracefully.
+     */
+    public void shutdown() {
+        executorService.shutdown();
+        try {
+            if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
+                executorService.shutdownNow();
+                if (!executorService.awaitTermination(60, TimeUnit.SECONDS))
+                    System.err.println("Executor service did not terminate");
+            }
+        } catch (InterruptedException e) {
+            executorService.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 }

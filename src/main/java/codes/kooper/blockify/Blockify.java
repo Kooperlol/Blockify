@@ -7,7 +7,6 @@ import codes.kooper.blockify.managers.StageManager;
 import codes.kooper.blockify.protocol.BlockDigAdapter;
 import codes.kooper.blockify.protocol.BlockPlaceAdapter;
 import codes.kooper.blockify.protocol.ChunkLoadAdapter;
-import codes.kooper.blockify.protocol.PlayerInfoAdapter;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.manager.server.ServerVersion;
 import io.github.retrooper.packetevents.factory.spigot.SpigotPacketEventsBuilder;
@@ -38,12 +37,13 @@ public final class Blockify extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new StageBoundListener(), this);
 
-        PacketEvents.getAPI().getEventManager().registerListeners(new BlockDigAdapter(), new BlockPlaceAdapter(), new ChunkLoadAdapter(), new PlayerInfoAdapter());
+        PacketEvents.getAPI().getEventManager().registerListeners(new BlockDigAdapter(), new BlockPlaceAdapter(), new ChunkLoadAdapter());
         PacketEvents.getAPI().init();
     }
 
     @Override
     public void onDisable() {
+        blockChangeManager.shutdown();
         getLogger().info("Blockify has been disabled!");
     }
 
