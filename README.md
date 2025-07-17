@@ -1,5 +1,5 @@
 <div align="center">
-    <img src="public/blockify.png" width="320" height="320">
+    <img src="blockify.png" width="320" height="320">
 </div>
 
 [![](https://img.shields.io/github/license/kooperlol/blockify.svg)](https://github.com/Kooperlol/Blockify/blob/master/LICENSE.md) [![](https://jitpack.io/v/Kooperlol/Blockify.svg)](https://jitpack.io/#Kooperlol/Blockify) [![](https://img.shields.io/badge/Discord-7289DA?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/HeH2CuFCjz)
