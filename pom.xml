@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>codes.kooper</groupId>
-    <artifactId>Blockify</artifactId>
+    <artifactId>blockify</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
@@ -89,4 +89,12 @@
             <scope>provided</scope>
         </dependency>
     </dependencies>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Kooperlol Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/Kooperlol/Blockify</url>
+        </repository>
+    </distributionManagement>
 </project>
